@@ -1,0 +1,84 @@
+challenge:
+  name: ising_lift
+  display_name: "Weighted-Graph Quantum Lift"
+
+oracle:
+  enabled: true
+  description: "Integer coefficient or wall status for a weighted graph with vertex fields."
+  timeout_seconds: 10
+  input_schema:
+    type: object
+    additionalProperties: false
+    required: [n, edges, fields]
+    properties:
+      n:
+        type: integer
+        minimum: 1
+        maximum: 16
+      edges:
+        type: array
+        items:
+          type: array
+          minItems: 3
+          maxItems: 3
+          prefixItems:
+            - { type: integer, minimum: 0 }
+            - { type: integer, minimum: 0 }
+            - { type: integer, not: { const: 0 } }
+      fields:
+        type: array
+        items: { type: integer }
+  output_schema:
+    oneOf:
+      - type: object
+        additionalProperties: false
+        required: [status, coefficient]
+        properties:
+          status: { const: ok }
+          coefficient: { type: integer }
+      - type: object
+        additionalProperties: false
+        required: [status]
+        properties:
+          status: { const: wall }
+      - type: object
+        additionalProperties: false
+        required: [status]
+        properties:
+          status: { const: malformed }
+
+daemon:
+  host: 127.0.0.1
+  port: 8787
+
+contestants:
+  - { id: claude, advisor: openai, advisor_env: OPENAI_API_KEY }
+  - { id: codex, advisor: gemini, advisor_env: GEMINI_API_KEY }
+
+stopping:
+  max_rounds: null
+  external_solved_signal: null
+  idle_minutes_to_halt: null
+
+historian:
+  enabled: false
+  every_n_rounds: 50
+
+breakthroughs:
+  require_independent_confirmation: true
+  allow_self_flag_with_verifier: false
+  allow_predictive_promotion: true
+
+finish_gate:
+  min_rows: 12
+  required_tags:
+    - n2
+    - n3
+    - n4
+    - n5
+    - fields
+    - nofields
+    - frustrated
+    - leak_pair
+    - wall_checked
+    - disconnected

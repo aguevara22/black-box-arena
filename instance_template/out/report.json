@@ -1,0 +1,101 @@
+{
+  "gates": [
+    {
+      "checks": [
+        {
+          "config": "instance_template",
+          "criterion": "manifest validates",
+          "extra": {},
+          "measured": "",
+          "name": "manifest-valid",
+          "runtime_s": 0.0,
+          "verdict": "PASS"
+        },
+        {
+          "config": "instance_template",
+          "criterion": "declared route imports are independent",
+          "extra": {},
+          "measured": "",
+          "name": "independence-lint-clean",
+          "runtime_s": 0.0,
+          "verdict": "PASS"
+        }
+      ],
+      "claim_ids": [],
+      "gate_id": "manifest",
+      "n_fail": 0,
+      "n_pass": 2,
+      "n_skip": 0,
+      "policy_snapshot": {
+        "notes": "",
+        "precision_stages": [],
+        "quick_factor": 0.3,
+        "samples": {},
+        "size_ladder": [],
+        "time_budget_s": null,
+        "tol": 1e-08
+      },
+      "runtime_s": 0.0007263339939527214,
+      "seed": 11395094113341057523,
+      "title": "Manifest and independence checks",
+      "type": "gate",
+      "verdict": "PASS"
+    },
+    {
+      "checks": [
+        {
+          "config": "template-example",
+          "criterion": "gate completes without an exception",
+          "extra": {
+            "traceback": "Traceback (most recent call last):\n  File \"/Users/aguevaragonzalez/Library/Mobile Documents/com~apple~CloudDocs/push Fab/shipping/gauntlet/runner.py\", line 123, in run\n    gate.fn(ctx)\n    ~~~~~~~^^^^^\n  File \"/Users/aguevaragonzalez/Library/Mobile Documents/com~apple~CloudDocs/push Fab/shipping/instance_template/gates/gate_example.py\", line 10, in _run\n    raise NotImplementedError(\"TODO: replace the example gate with a real claim check\")\nNotImplementedError: TODO: replace the example gate with a real claim check\n"
+          },
+          "measured": "NotImplementedError: TODO: replace the example gate with a real claim check",
+          "name": "unhandled-exception",
+          "runtime_s": 0.0,
+          "verdict": "FAIL"
+        }
+      ],
+      "claim_ids": [
+        "TEMPLATE-EXAMPLE"
+      ],
+      "gate_id": "template-example",
+      "n_fail": 1,
+      "n_pass": 0,
+      "n_skip": 0,
+      "policy_snapshot": {
+        "notes": "",
+        "precision_stages": [],
+        "quick_factor": 0.3,
+        "samples": {
+          "random": 1
+        },
+        "size_ladder": [],
+        "time_budget_s": null,
+        "tol": 1e-08
+      },
+      "runtime_s": 0.000385124993044883,
+      "seed": 127807732688072412,
+      "title": "Unimplemented example gate",
+      "type": "gate",
+      "verdict": "FAIL"
+    }
+  ],
+  "meta": {
+    "instance": "instance_template",
+    "quick": false,
+    "root_seed": 2026,
+    "started_utc": "2026-07-21T15:54:52.079865+00:00",
+    "type": "meta"
+  },
+  "summary": {
+    "ok": false,
+    "totals": {
+      "checks": 3,
+      "fail": 1,
+      "gates": 2,
+      "pass": 2,
+      "skip": 0
+    },
+    "type": "summary"
+  }
+}
