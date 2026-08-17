@@ -24,7 +24,7 @@ Do NOT issue instructions. Do NOT direct contestants. Only summarize.
 [PROBLEM]
 {problem}
 
-[RECENT ORACLE QUERIES]
+[RECENT KERNEL CHECK JOBS]
 {oracle_log}
 
 [RECENT FINDINGS]
@@ -37,9 +37,11 @@ Do NOT issue instructions. Do NOT direct contestants. Only summarize.
 
 async def write_digest(state: StateManager) -> str:
     oracle_log = "\n".join(
-        f"- input={e.get('input')} → {e.get('result', {}).get('output')}"
-        for e in state.recent_oracle_log(40)
-        if e.get("phase") == "executed"
+        f"- {e.get('job_id')} ({e.get('contestant_id')}, {e.get('mode')}) → "
+        f"{(e.get('result') or {}).get('outcome')}"
+        f" {(e.get('result') or {}).get('failure_kind') or ''}"
+        for e in state.recent_jobs(40)
+        if e.get("event") == "job_finished"
     ) or "(none)"
 
     findings = "\n".join(

@@ -1,0 +1,35 @@
+# Toy pilot: the Fibonacci addition formula over frozen Arena.fib.
+
+challenge:
+  name: toy_fib_add
+  display_name: "Fibonacci addition formula"
+
+kernel:
+  enabled: true
+  uses_mathlib: false
+  description: >
+    Lean 4 kernel over the frozen Defs (Arena.fib). Submit eval jobs to
+    compute values, proof jobs to certify lemmas, skeleton jobs to certify
+    decompositions.
+  timeout_seconds: 120
+  max_timeout_seconds: 300
+  max_concurrent_builds: 1
+  lease_ttl_seconds: 1800
+
+hygiene:
+  goal_def: Arena.GoalStatement
+  import_allowlist: [Defs, Goal]
+
+daemon:
+  host: 127.0.0.1
+  port: 8787
+
+contestants:
+  - { id: claude, advisor: openai, advisor_env: OPENAI_API_KEY }
+  - { id: codex, advisor: gemini, advisor_env: GEMINI_API_KEY }
+
+historian:
+  enabled: false
+
+breakthroughs:
+  allow_predictive_promotion: true

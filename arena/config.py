@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
 import yaml
-from jsonschema import Draft202012Validator
 from pydantic import BaseModel, Field
 
 
@@ -13,18 +11,38 @@ class ChallengeMeta(BaseModel):
     display_name: str | None = None
 
 
-class OracleConfig(BaseModel):
+class KernelConfig(BaseModel):
+    """The Lean checker. Replaces the sealed oracle: not secret, but the
+    daemon's kernel verdict is the only admissible evidence."""
+
     enabled: bool = True
-    input_schema: dict[str, Any] = Field(default_factory=dict)
-    output_schema: dict[str, Any] = Field(default_factory=dict)
+    uses_mathlib: bool = False
     description: str = ""
-    timeout_seconds: int = 10
+    timeout_seconds: int = 120
+    max_timeout_seconds: int = 600
+    max_concurrent_builds: int = 1
+    max_source_bytes: int = 262144
+    lease_ttl_seconds: int = 1800
+    workspace_root: str | None = None
 
 
-class StoppingConfig(BaseModel):
-    max_rounds: int | None = None
-    external_solved_signal: str | None = None
-    idle_minutes_to_halt: int | None = None
+class HygieneConfig(BaseModel):
+    """Mechanical honesty gate. Source-scan limits are enforced by the daemon
+    before any build; the kernel axiom audit is the authoritative verdict."""
+
+    allowed_axioms: list[str] = Field(
+        default_factory=lambda: ["propext", "Classical.choice", "Quot.sound"]
+    )
+    # Import roots contestants may use (prefix match on the first component).
+    import_allowlist: list[str] = Field(default_factory=lambda: ["Defs", "Goal"])
+    max_heartbeats: int = 400000
+    max_rec_depth: int = 1024
+    # Name of the goal Prop definition inside Goal.lean, e.g. Arena.GoalStatement.
+    goal_def: str = "Arena.GoalStatement"
+    # Optional freeze: sha256 of Goal.lean recorded at challenge-authoring time.
+    # Empty string disables the check; when set, the daemon refuses to start on
+    # mismatch.
+    goal_sha256: str = ""
 
 
 class HistorianConfig(BaseModel):
@@ -33,14 +51,10 @@ class HistorianConfig(BaseModel):
 
 
 class BreakthroughsConfig(BaseModel):
-    require_independent_confirmation: bool = True
-    allow_self_flag_with_verifier: bool = True
+    # Promotion paths are kernel-verdict (cite a successful job) and
+    # predictive match (pre-registered predict came true). The legacy
+    # token-overlap and LLM-critic paths are gone.
     allow_predictive_promotion: bool = True
-
-
-class FinishGateConfig(BaseModel):
-    min_rows: int = Field(default=0, ge=0)
-    required_tags: list[str] = Field(default_factory=list)
 
 
 class DaemonConfig(BaseModel):
@@ -56,25 +70,15 @@ class ContestantConfig(BaseModel):
 
 class ChallengeConfig(BaseModel):
     challenge: ChallengeMeta
-    oracle: OracleConfig = Field(default_factory=OracleConfig)
+    kernel: KernelConfig = Field(default_factory=KernelConfig)
+    hygiene: HygieneConfig = Field(default_factory=HygieneConfig)
     daemon: DaemonConfig = Field(default_factory=DaemonConfig)
     contestants: list[ContestantConfig] = Field(default_factory=list)
-    stopping: StoppingConfig = Field(default_factory=StoppingConfig)
     historian: HistorianConfig = Field(default_factory=HistorianConfig)
     breakthroughs: BreakthroughsConfig = Field(default_factory=BreakthroughsConfig)
-    finish_gate: FinishGateConfig | None = None
 
 
 def load_config(path: Path) -> ChallengeConfig:
     with open(path, encoding="utf-8") as f:
         raw = yaml.safe_load(f)
-    cfg = ChallengeConfig.model_validate(raw)
-    if cfg.oracle.enabled and cfg.oracle.input_schema:
-        Draft202012Validator.check_schema(cfg.oracle.input_schema)
-    return cfg
-
-
-def build_input_validator(schema: dict[str, Any]) -> Draft202012Validator | None:
-    if not schema:
-        return None
-    return Draft202012Validator(schema)
+    return ChallengeConfig.model_validate(raw)

@@ -1,8 +1,9 @@
 # Contestant protocol
 
-You are one independent contestant in a daemon-backed research session. The
-daemon is the sole writer of shared state and the only oracle gateway. Use
-`arena/client.py` for every interaction; do not edit state files.
+You are one independent contestant in a daemon-backed collaborative proving
+session. The daemon is the sole writer of shared state and the only gateway
+to the Lean kernel. Use `arena/client.py` for every interaction; do not edit
+state files, and do not touch the daemon's Lean workspace.
 
 Set one configured identity:
 
@@ -11,106 +12,139 @@ export ORACLE_DAEMON_URL=http://127.0.0.1:8787
 export CONTESTANT_ID=claude  # or codex
 ```
 
-Do not inspect or import `challenges/**/oracle.py` or
-`arena/oracle_worker.py`. Oracle answers obtained through the client are the
-only contestant-visible ground truth.
+**The kernel is the only ground truth.** The daemon's job log is the only
+admissible evidence. Advisor output, your own local builds, and your
+convictions are not evidence — cite job ids.
 
 ## One tick
 
 Do one tick and then yield:
 
-1. Pull a snapshot and read your journal before shared entries.
+1. Pull a snapshot (your journal first, then shared state) and the DAG
+   frontier — the open, unleased nodes.
 
    ```sh
    python3 arena/client.py snapshot --contestant-id "$CONTESTANT_ID"
+   python3 arena/client.py dag --frontier
    ```
 
-2. Think and compute in your own scratch area. An optional cross-vendor
-   advisor can check a hard derivation, but advice is not evidence.
+2. Pick your move: claim an open leaf to prove, or propose a decomposition
+   of an unproved node. Claim before you work — leases (TTL-limited) are
+   what keep two contestants off the same lemma.
 
    ```sh
-   .venv/bin/python arena/advisor.py --advisor openai --prompt-file question.txt
+   python3 arena/client.py claim --node <node_id>
    ```
 
-3. If the oracle is enabled, predict first when you have a genuine test.
+3. Think and compute in your own scratch area. An optional cross-vendor
+   advisor can check a hard derivation, but advice is not evidence. Use eval
+   jobs to compute with the frozen definitions:
 
    ```sh
-   python3 arena/client.py oracle --contestant-id "$CONTESTANT_ID" \
-     --input '{"n":2,"edges":[],"fields":[1,2]}' \
-     --predict '{"status":"ok","coefficient":0}' \
-     --hypothesis "state the claim tested by this prediction"
+   printf 'import Defs.Basic\n#eval Arena.double 21\n' | \
+     python3 arena/client.py check --mode eval --file - --wait
    ```
 
-   Every accepted response is correlated by request id and input hash. A
-   correct preregistered prediction may promote its hypothesis.
+4. Submit kernel work. Predict first when you have a genuine test — a
+   pre-registered correct prediction promotes its hypothesis to breakthrough.
 
-4. Post the useful result and update private continuity.
+   To prove a claimed node (your file declares `theorem <name> : <statement>`;
+   the daemon compiles it against the node's dependency context — proved
+   children as real sources, unproved ones as `sorry` stubs):
 
    ```sh
-   python3 arena/client.py finding --contestant-id "$CONTESTANT_ID" --text "..."
-   python3 arena/client.py breakthrough --contestant-id "$CONTESTANT_ID" --text "..."
-   python3 arena/client.py direction --contestant-id "$CONTESTANT_ID" --text "..."
-   python3 arena/client.py journal --contestant-id "$CONTESTANT_ID" --text "..."
+   python3 arena/client.py check --mode proof --node <node_id> \
+     --decl <name> --statement "<statement>" \
+     --predict ok --hypothesis "why this closes" --file proof.lean --wait
    ```
 
-5. Record the turn. Include the oracle calls made during that tick.
+   To propose a decomposition (skeleton = children declared `:= sorry`, then
+   the parent proved from them, all in one file):
 
    ```sh
+   python3 arena/client.py decompose --node <parent_id> --file skeleton.lean \
+     --children-json '[{"name":"child1","statement":"...","gloss":"..."}]'
+   ```
+
+   The decomposition is admitted only if the skeleton compiles; the children
+   then appear on the frontier.
+
+5. Post the useful result and update private continuity. Breakthroughs must
+   cite kernel evidence:
+
+   ```sh
+   python3 arena/client.py breakthrough --text "..." --job-id <J...>
+   python3 arena/client.py finding --text "..."
+   python3 arena/client.py direction --text "..."
+   python3 arena/client.py journal --text "..."
+   ```
+
+6. Release your lease if you are not continuing the node next tick, then
+   record the turn:
+
+   ```sh
+   python3 arena/client.py release --node <node_id>
    python3 arena/client.py turn --contestant-id "$CONTESTANT_ID" \
-     --record '{"reply_text":"short tick summary","oracle_calls":[]}'
+     --record '{"reply_text":"short tick summary","jobs":["J..."]}'
    ```
 
-Findings are open observations. A breakthrough candidate is promoted only by
-an enabled independent-confirmation, critic, or predictive path. Correct an
-entry by appending a superseding entry; never rewrite history.
+Hygiene (mechanically enforced; violations reject the job before it builds):
+no `sorry`/`admit` outside skeleton jobs, no `native_decide`, no new
+`axiom`, no `unsafe`/`@[extern]`/`@[implemented_by]`, no `set_option
+maxHeartbeats` above the cap, imports only from the allowlist in
+`config.yaml`. The authoritative check is the kernel's own `#print axioms`
+on the daemon-appended trailer — what the scan misses, the axiom audit
+catches.
+
+Accept a peer's proved node after checking **statement fidelity** — that its
+statement is the lemma its gloss and `problem.md` intend (the kernel already
+checked the proof):
+
+```sh
+python3 arena/client.py accept --node <node_id> --reason "statement matches intent"
+```
 
 ## Finish and peer verification
 
-A finish gives the complete effective algorithm and correctness argument
-required by `problem.md`:
+Finish when the root is provable from the accepted DAG. The daemon assembles
+the full proof from stored node sources, rebuilds it strictly (no stubs, no
+`sorryAx`), audits axioms, and checks the root against the frozen
+`Arena.GoalStatement` by defeq elaboration:
 
 ```sh
-python3 arena/client.py finish --contestant-id "$CONTESTANT_ID" \
-  --text-file solution.md
+python3 arena/client.py finish --text-file solution.md --wait
 ```
 
-When a challenge config declares `finish_gate`, the proposal must contain
-lines in this exact form:
-
-```text
-EVIDENCE: input=<json> | tags=<comma-list> | oracle=<int or wall> | proposed=<int or wall> | match=yes|no
-```
-
-The daemon parses every evidence line before creating a finish proposal. It
-rejects the submission unless at least `min_rows` rows say `match=yes` and
-every `required_tags` value occurs on a matching row. A matching wall row is
-valid. When `finish_gate` is omitted, the proposal proceeds directly to peer
-verification.
-
-Only another contestant may verify:
+Only another contestant may verify. Peer review is scoped to statement
+fidelity: the kernel checked the proof; you check that `Defs/` and
+`Goal.lean` say what `problem.md` means. A rejection must cite a concrete
+gap.
 
 ```sh
-python3 arena/client.py verify --contestant-id "$CONTESTANT_ID" \
-  --proposal-id "<id>" --agree --reason "checked algorithm and evidence"
-
-python3 arena/client.py verify --contestant-id "$CONTESTANT_ID" \
-  --proposal-id "<id>" --reject --reason "concrete gap or failing input"
+python3 arena/client.py verify --proposal-id "<id>" --agree \
+  --reason "definitions and goal formalize the stated theorem"
 ```
 
-The daemon writes `SOLVED` only after peer agreement.
+The daemon writes `SOLVED` only after peer agreement. Correct an entry by
+appending a superseding entry; never rewrite history.
 
 ## Command summary
 
 | Command | Effect |
 |---|---|
-| `health` / `status` | liveness, challenge, round count, solved flag |
-| `problem` | contestant statement and oracle mode |
+| `health` / `status` | liveness, challenge, kernel version, queue depth |
+| `problem` | contestant statement and kernel description |
 | `snapshot` | private continuity plus recent shared state |
-| `oracle` | sealed query with optional prediction |
+| `dag [--frontier]` | proof DAG view / claimable nodes |
+| `check` | submit a kernel job (eval, proof, skeleton) |
+| `job --id` | poll a job |
+| `claim` / `release` | lease a node / give it back |
+| `decompose` | propose a kernel-checked decomposition |
+| `accept` | accept a peer's proved node (statement fidelity) |
 | `finding` | append an observation |
-| `breakthrough` | submit a promotion candidate |
+| `breakthrough` | claim + kernel evidence (job id) |
 | `direction` | replace current direction |
 | `journal` | append private notes |
 | `turn` | append a turn record and advance the round |
-| `finish` | submit a complete solution |
-| `verify` | accept or reject another contestant's proposal |
+| `finish` | trigger the final assembly build + proposal |
+| `verify` | accept or reject another contestant's finish |

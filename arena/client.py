@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Thin stdlib-only client for the oracle daemon.
+"""Thin stdlib-only client for the Lean-kernel arena daemon.
 
-Contestants (e.g. `codex` / `claude`) interact with the shared sealed-oracle +
+Contestants (e.g. `codex` / `claude`) interact with the shared kernel +
 blackboard ONLY through this client. No third-party deps, so it runs under any
 Python interpreter.
 
@@ -13,14 +13,17 @@ Examples:
   client.py health
   client.py problem
   client.py snapshot --contestant-id codex
-  client.py oracle --input '{"n":2,"edges":[],"fields":[1,2]}'
-  client.py finding --text "The calibration rows suggest a sign symmetry"
-  client.py breakthrough --text-file -          # read body from stdin
-  client.py direction --text "test constant-offset variants next"
-  client.py journal --text "this tick: confirmed one calibration row"
-  client.py turn --record '{"reply_text":"...","oracle_calls":[]}'
+  client.py check --mode eval --file probe.lean --wait
+  client.py check --mode proof --decl double_zero --file proof.lean \
+      --predict ok --hypothesis "double 0 = 0 closes by rfl" --wait
+  client.py job --id J0123abcd
+  client.py finding --text "the two-step recurrence closes the parent goal"
+  client.py breakthrough --text "..." --job-id J0123abcd
+  client.py direction --text "prove the succ case next"
+  client.py journal --text "this tick: leaf double_zero proved"
+  client.py turn --record '{"reply_text":"...","jobs":[]}'
   client.py finish --text-file solution.md
-  client.py verify --proposal-id abc123 --agree --reason "checked the algorithm"
+  client.py verify --proposal-id abc123 --agree --reason "statement matches problem.md"
 """
 from __future__ import annotations
 
@@ -28,6 +31,7 @@ import argparse
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -36,7 +40,7 @@ DEFAULT_URL = os.environ.get("ORACLE_DAEMON_URL", "http://127.0.0.1:8787")
 DEFAULT_CID = os.environ.get("CONTESTANT_ID", "")
 
 
-def _request(method: str, url: str, body=None, timeout: int = 300):
+def _request(method: str, url: str, body=None, timeout: int = 60):
     data = json.dumps(body).encode("utf-8") if body is not None else None
     req = urllib.request.Request(
         url, data=data, method=method,
@@ -97,16 +101,60 @@ def main() -> int:
     sub.add_parser("problem", parents=[common])
     sub.add_parser("snapshot", parents=[common])
 
-    p_oracle = sub.add_parser("oracle", parents=[common])
-    p_oracle.add_argument("--input", required=True, help="JSON matching the oracle input schema")
-    p_oracle.add_argument("--predict", default=None, help="optional JSON: expected output")
-    p_oracle.add_argument("--hypothesis", default=None, help="optional: promoted to breakthrough if predict matches")
-    p_oracle.add_argument("--timeout", type=int, default=None)
+    p_check = sub.add_parser("check", parents=[common])
+    p_check.add_argument("--mode", required=True, choices=["eval", "proof", "skeleton"])
+    p_check.add_argument("--file", default=None, help="Lean source file, or '-' for stdin")
+    p_check.add_argument("--source", default=None, help="Lean source inline")
+    p_check.add_argument("--decl", default=None, help="declaration under audit (proof/skeleton)")
+    p_check.add_argument("--statement", default=None, help="frozen statement for the fidelity check")
+    p_check.add_argument("--node", default=None, help="DAG node id this job targets")
+    p_check.add_argument("--predict", default=None, choices=["ok", "fail"],
+                         help="pre-registered outcome prediction")
+    p_check.add_argument("--hypothesis", default=None,
+                         help="promoted to breakthrough if the prediction comes true")
+    p_check.add_argument("--timeout", type=int, default=None)
+    p_check.add_argument("--wait", action="store_true", help="poll until the job finishes")
+    p_check.add_argument("--wait-timeout", type=int, default=900)
+
+    p_job = sub.add_parser("job", parents=[common])
+    p_job.add_argument("--id", required=True, dest="job_id")
+
+    p_dag = sub.add_parser("dag", parents=[common])
+    p_dag.add_argument("--frontier", action="store_true", help="claimable nodes only")
+
+    p_pnode = sub.add_parser("propose-node", parents=[common])
+    p_pnode.add_argument("--name", required=True, help="Lean declaration name")
+    p_pnode.add_argument("--statement", required=True, help="Lean proposition text")
+    p_pnode.add_argument("--gloss", default="", help="informal one-liner")
+
+    for name in ("claim", "release"):
+        p = sub.add_parser(name, parents=[common])
+        p.add_argument("--node", required=True, dest="node_id")
+
+    p_accept = sub.add_parser("accept", parents=[common])
+    p_accept.add_argument("--node", required=True, dest="node_id")
+    p_accept.add_argument("--reason", required=True, help="statement-fidelity justification")
+
+    p_dec = sub.add_parser("decompose", parents=[common])
+    p_dec.add_argument("--node", required=True, dest="node_id", help="parent node id")
+    p_dec.add_argument("--file", default=None, help="skeleton source, or '-' for stdin")
+    p_dec.add_argument("--source", default=None, help="skeleton source inline")
+    p_dec.add_argument("--children-json", required=True,
+                       help='JSON list of {"name","statement","gloss"}')
+    p_dec.add_argument("--timeout", type=int, default=None)
+    p_dec.add_argument("--wait", action="store_true", help="poll the skeleton job")
+    p_dec.add_argument("--wait-timeout", type=int, default=900)
 
     for name in ("finding", "breakthrough", "direction", "journal", "finish"):
         p = sub.add_parser(name, parents=[common])
         p.add_argument("--text", default=None)
         p.add_argument("--text-file", default=None, help="read body from file, or '-' for stdin")
+        if name == "breakthrough":
+            p.add_argument("--job-id", default=None,
+                           help="finished ok job that is the kernel evidence for this claim")
+        if name == "finish":
+            p.add_argument("--wait", action="store_true", help="poll the final-assembly job")
+            p.add_argument("--wait-timeout", type=int, default=900)
 
     p_turn = sub.add_parser("turn", parents=[common])
     p_turn.add_argument("--record", default="{}", help="JSON turn record")
@@ -133,21 +181,110 @@ def main() -> int:
             payload = {"ok": False, "error": "snapshot requires --contestant-id or $CONTESTANT_ID"}
         else:
             payload = _request("GET", f"{base}/snapshot?contestant_id={urllib.parse.quote(cid)}")
-    elif cmd == "oracle":
-        body = {"contestant_id": cid, "input": _parse_json("--input", args.input)}
-        if args.predict is not None:
-            body["predict"] = _parse_json("--predict", args.predict)
-        if args.hypothesis is not None:
-            body["hypothesis"] = args.hypothesis
-        if args.timeout is not None:
-            body["timeout"] = args.timeout
-        payload = _request("POST", f"{base}/oracle", body, timeout=(args.timeout or 60) + 30)
+    elif cmd == "check":
+        source = None
+        if args.file:
+            source = sys.stdin.read() if args.file == "-" else open(args.file, encoding="utf-8").read()
+        elif args.source is not None:
+            source = args.source
+        if source is None:
+            payload = {"ok": False, "error": "check requires --file or --source"}
+        else:
+            body = {"contestant_id": cid, "mode": args.mode, "source": source}
+            for key, value in (
+                ("decl", args.decl),
+                ("statement", args.statement),
+                ("node_id", args.node),
+                ("predict", args.predict),
+                ("hypothesis", args.hypothesis),
+                ("timeout", args.timeout),
+            ):
+                if value is not None:
+                    body[key] = value
+            payload = _request("POST", f"{base}/check", body, timeout=60)
+            if args.wait and payload.get("ok") and payload.get("status") == "queued":
+                deadline = time.time() + args.wait_timeout
+                job_id = payload.get("job_id", "")
+                while time.time() < deadline:
+                    time.sleep(3)
+                    payload = _request("GET", f"{base}/check/{urllib.parse.quote(job_id)}", timeout=60)
+                    if not payload.get("ok") or payload.get("status") == "done":
+                        break
+                else:
+                    payload = {"ok": False, "error": f"job {job_id} still running after {args.wait_timeout}s", "job_id": job_id}
+    elif cmd == "job":
+        payload = _request("GET", f"{base}/check/{urllib.parse.quote(args.job_id)}", timeout=60)
+    elif cmd == "dag":
+        view = "frontier" if args.frontier else "full"
+        payload = _request("GET", f"{base}/dag?view={view}")
+    elif cmd == "propose-node":
+        payload = _request("POST", f"{base}/dag/node", {
+            "contestant_id": cid, "name": args.name,
+            "statement": args.statement, "gloss": args.gloss,
+        })
+    elif cmd in ("claim", "release"):
+        payload = _request("POST", f"{base}/dag/{cmd}", {
+            "contestant_id": cid, "node_id": args.node_id,
+        })
+    elif cmd == "accept":
+        payload = _request("POST", f"{base}/dag/accept", {
+            "contestant_id": cid, "node_id": args.node_id, "reason": args.reason,
+        })
+    elif cmd == "decompose":
+        source = None
+        if args.file:
+            source = sys.stdin.read() if args.file == "-" else open(args.file, encoding="utf-8").read()
+        elif args.source is not None:
+            source = args.source
+        if source is None:
+            payload = {"ok": False, "error": "decompose requires --file or --source"}
+        else:
+            body = {
+                "contestant_id": cid,
+                "node_id": args.node_id,
+                "source": source,
+                "children": _parse_json("--children-json", args.children_json),
+            }
+            if args.timeout is not None:
+                body["timeout"] = args.timeout
+            payload = _request("POST", f"{base}/dag/decompose", body, timeout=60)
+            if args.wait and payload.get("ok") and payload.get("status") == "queued":
+                deadline = time.time() + args.wait_timeout
+                job_id = payload.get("job_id", "")
+                decomp_id = payload.get("decomp_id")
+                while time.time() < deadline:
+                    time.sleep(3)
+                    payload = _request("GET", f"{base}/check/{urllib.parse.quote(job_id)}", timeout=60)
+                    if not payload.get("ok") or payload.get("status") == "done":
+                        break
+                else:
+                    payload = {"ok": False, "error": f"job {job_id} still running after {args.wait_timeout}s", "job_id": job_id}
+                if isinstance(payload, dict):
+                    payload.setdefault("decomp_id", decomp_id)
     elif cmd in ("finding", "breakthrough", "direction", "journal", "finish"):
         text = _read_text(args)
         if text is None:
             payload = {"ok": False, "error": f"{cmd} requires --text or --text-file"}
         else:
-            payload = _request("POST", f"{base}/{cmd}", {"contestant_id": cid, "text": text})
+            body = {"contestant_id": cid, "text": text}
+            if cmd == "breakthrough" and getattr(args, "job_id", None):
+                body["job_id"] = args.job_id
+            payload = _request("POST", f"{base}/{cmd}", body)
+            if (
+                cmd == "finish"
+                and getattr(args, "wait", False)
+                and payload.get("ok")
+                and payload.get("status") == "queued"
+            ):
+                deadline = time.time() + args.wait_timeout
+                job_id = payload.get("job_id", "")
+                while time.time() < deadline:
+                    time.sleep(3)
+                    payload = _request("GET", f"{base}/check/{urllib.parse.quote(job_id)}", timeout=60)
+                    if not payload.get("ok") or payload.get("status") == "done":
+                        break
+                else:
+                    payload = {"ok": False, "error": f"job {job_id} still running after {args.wait_timeout}s", "job_id": job_id}
     elif cmd == "turn":
         record = _parse_json("--record", args.record)
         payload = _request("POST", f"{base}/turn", {"contestant_id": cid, "record": record})

@@ -8,22 +8,10 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from .oracle_protocol import (
-        ORACLE_CACHE_VERSION,
-        ORACLE_PROTOCOL_VERSION,
-        canonical_json,
-        oracle_input_hash,
-        short_hash,
-    )
+    from .protocol import canonical_json, sha256_text, short_hash
     from .utils import jsonl, paths
 except ImportError:  # direct module execution
-    from oracle_protocol import (
-        ORACLE_CACHE_VERSION,
-        ORACLE_PROTOCOL_VERSION,
-        canonical_json,
-        oracle_input_hash,
-        short_hash,
-    )
+    from protocol import canonical_json, sha256_text, short_hash
     from utils import jsonl, paths
 
 
@@ -47,7 +35,7 @@ class BlackboardSnapshot:
     recent_breakthroughs: list[dict[str, Any]]
     recent_findings: list[dict[str, Any]]
     recent_finish_records: list[dict[str, Any]]
-    recent_oracle_log: list[dict[str, Any]]
+    recent_jobs: list[dict[str, Any]]
     last_reply: dict[str, Any] | None
     digest: str
 
@@ -97,8 +85,17 @@ class StateManager:
     def recent_finish_records(self, n: int = 10) -> list[dict[str, Any]]:
         return jsonl.tail(self.shared / "finish.jsonl", n)
 
-    def recent_oracle_log(self, n: int = 30) -> list[dict[str, Any]]:
-        return jsonl.tail(self.shared / "oracle_log.jsonl", n)
+    def recent_jobs(self, n: int = 30) -> list[dict[str, Any]]:
+        return jsonl.tail(self.shared / "jobs.jsonl", n)
+
+    def iter_job_records(self):
+        return jsonl.iter_records(self.shared / "jobs.jsonl")
+
+    def recent_dag_events(self, n: int = 50) -> list[dict[str, Any]]:
+        return jsonl.tail(self.shared / "dag.jsonl", n)
+
+    def iter_dag_records(self):
+        return jsonl.iter_records(self.shared / "dag.jsonl")
 
     def last_reply(self, contestant_id: str) -> dict[str, Any] | None:
         turns = jsonl.tail(self.contestant_dir(contestant_id) / "turns.jsonl", 1)
@@ -112,7 +109,7 @@ class StateManager:
             recent_breakthroughs=self.recent_breakthroughs(),
             recent_findings=self.recent_findings(),
             recent_finish_records=self.recent_finish_records(),
-            recent_oracle_log=self.recent_oracle_log(),
+            recent_jobs=self.recent_jobs(),
             last_reply=self.last_reply(contestant_id),
             digest=self.digest(),
         )
@@ -164,12 +161,40 @@ class StateManager:
         async with self.lock:
             jsonl.append(self.contestant_dir(contestant_id) / "turns.jsonl", record)
 
-    async def append_finish_proposal(self, contestant_id: str, text: str) -> dict[str, Any]:
+    async def append_finish_rejection(
+        self, contestant_id: str, job_id: str, detail: str
+    ) -> dict[str, Any]:
+        rec = {
+            "ts": _ts(),
+            "phase": "rejected",
+            "contestant_id": contestant_id,
+            "job_id": job_id,
+            "detail": detail,
+            "id": _hash({"phase": "finish_rejected", "j": job_id, "ts": time.time()}),
+        }
+        async with self.lock:
+            jsonl.append(self.shared / "finish.jsonl", rec)
+            with open(self.shared / "finish.md", "a", encoding="utf-8") as f:
+                f.write(
+                    f"\n### {rec['ts']} — {contestant_id} finish REJECTED by kernel "
+                    f"(job {job_id})\n{detail}\n"
+                )
+        return rec
+
+    async def append_finish_proposal(
+        self,
+        contestant_id: str,
+        text: str,
+        job_id: str | None = None,
+        hygiene_report: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         rec = {
             "ts": _ts(),
             "phase": "proposed",
             "contestant_id": contestant_id,
             "text": text,
+            "job_id": job_id,
+            "hygiene_report": hygiene_report,
             "id": _hash({"phase": "finish", "c": contestant_id, "t": text, "ts": time.time()}),
         }
         async with self.lock:
@@ -226,102 +251,65 @@ class StateManager:
             tmp_path.write_text(content, encoding="utf-8")
             tmp_path.replace(solved_path)
 
-    # ---- oracle log ----
+    # ---- job log ----
 
-    async def record_oracle_prediction(
-        self,
-        contestant_id: str,
-        input_payload: Any,
-        predict: Any,
-        hypothesis: str | None,
-    ) -> dict[str, Any]:
-        rec = {
-            "ts": _ts(),
-            "phase": "predicted",
-            "contestant_id": contestant_id,
-            "input": input_payload,
-            "input_hash": oracle_input_hash(self.challenge, input_payload),
-            "predict": predict,
-            "hypothesis": hypothesis,
-            "predicted_at": _ts(),
-        }
+    async def append_job_event(self, record: dict[str, Any]) -> dict[str, Any]:
+        rec = {"ts": _ts(), **record}
         async with self.lock:
-            jsonl.append(self.shared / "oracle_log.jsonl", rec)
-            with open(self.shared / "oracle_log.md", "a", encoding="utf-8") as f:
+            jsonl.append(self.shared / "jobs.jsonl", rec)
+            with open(self.shared / "jobs.md", "a", encoding="utf-8") as f:
+                event = rec.get("event", "?")
+                jid = rec.get("job_id", "?")
+                cid = rec.get("contestant_id", "?")
+                if event == "job_finished":
+                    result = rec.get("result") or {}
+                    f.write(
+                        f"\n### {rec['ts']} — {jid} finished ({cid}, {rec.get('mode', '?')})\n"
+                        f"outcome: {result.get('outcome')} {result.get('failure_kind') or ''}\n"
+                    )
+                else:
+                    f.write(f"\n### {rec['ts']} — {jid} {event} ({cid})\n")
+        return rec
+
+    # ---- DAG log ----
+
+    async def append_dag_event(self, record: dict[str, Any]) -> dict[str, Any]:
+        rec = {"ts": _ts(), **record}
+        async with self.lock:
+            jsonl.append(self.shared / "dag.jsonl", rec)
+            with open(self.shared / "dag.md", "a", encoding="utf-8") as f:
                 f.write(
-                    f"\n### {rec['ts']} — {contestant_id} predicted\n"
-                    f"input: {_canon(input_payload)}\n"
-                    f"prediction: {_canon(predict)}\n"
-                    f"hypothesis: {hypothesis or ''}\n"
+                    f"\n### {rec['ts']} — {rec.get('event', '?')}"
+                    f" {rec.get('node_id', rec.get('decomp_id', ''))}"
+                    f" ({rec.get('actor', '?')})\n"
                 )
         return rec
 
-    async def record_oracle_result(
-        self,
-        contestant_id: str,
-        input_payload: Any,
-        result: dict[str, Any],
-        predict: Any = None,
-        cache_hit: bool = False,
+    # ---- proof sources ----
+
+    async def store_proof_source(
+        self, node_id: str, source: str, job_id: str
     ) -> dict[str, Any]:
-        ih = oracle_input_hash(self.challenge, input_payload)
-        prediction_correct: bool | None = None
-        if predict is not None and result.get("status") == "ok":
-            prediction_correct = _canon(predict) == _canon(result.get("output"))
-        protocol_verified = self._result_matches_input(result, ih)
+        """Persist the kernel-accepted source for a proved node. Written once
+        per (node, proof); re-proving appends a superseding index entry and
+        overwrites the .lean file (the index is the record; the file is the
+        latest accepted content)."""
+        pdir = paths.proofs_dir(self.challenge)
         rec = {
             "ts": _ts(),
-            "phase": "executed",
-            "contestant_id": contestant_id,
-            "input": input_payload,
-            "input_hash": ih,
-            "cache_version": ORACLE_CACHE_VERSION,
-            "predict": predict,
-            "prediction_correct": prediction_correct,
-            "result": result,
-            "oracle_protocol_verified": protocol_verified,
-            "cache_hit": cache_hit,
-            "executed_at": _ts(),
+            "node_id": node_id,
+            "job_id": job_id,
+            "source_sha256": sha256_text(source),
+            "path": f"proofs/{node_id}.lean",
         }
         async with self.lock:
-            jsonl.append(self.shared / "oracle_log.jsonl", rec)
-            with open(self.shared / "oracle_log.md", "a", encoding="utf-8") as f:
-                f.write(
-                    f"\n### {rec['ts']} — {contestant_id} executed\n"
-                    f"input: {_canon(input_payload)}\n"
-                    f"result: {_canon(result)}\n"
-                    f"protocol verified: {protocol_verified}\n"
-                    f"cache hit: {cache_hit}\n"
-                )
+            (pdir / f"{node_id}.lean").write_text(source, encoding="utf-8")
+            jsonl.append(pdir / "index.jsonl", rec)
         return rec
 
-    def _result_matches_input(self, result: dict[str, Any], input_hash: str) -> bool:
-        return (
-            isinstance(result, dict)
-            and result.get("status") == "ok"
-            and result.get("protocol_version") == ORACLE_PROTOCOL_VERSION
-            and result.get("challenge") == self.challenge
-            and isinstance(result.get("request_id"), str)
-            and result.get("input_hash") == input_hash
-        )
-
-    def _cache_record_is_valid(self, rec: dict[str, Any], input_hash: str) -> bool:
-        result = rec.get("result")
-        return (
-            rec.get("cache_version") == ORACLE_CACHE_VERSION
-            and rec.get("phase") == "executed"
-            and rec.get("input_hash") == input_hash
-            and isinstance(result, dict)
-            and self._result_matches_input(result, input_hash)
-        )
-
-    def oracle_cache_lookup(self, input_payload: Any) -> dict[str, Any] | None:
-        target = oracle_input_hash(self.challenge, input_payload)
-        latest: dict[str, Any] | None = None
-        for rec in jsonl.iter_records(self.shared / "oracle_log.jsonl"):
-            if self._cache_record_is_valid(rec, target):
-                latest = rec.get("result")
-        return latest
+    def proof_source(self, node_id: str) -> str | None:
+        f = paths.proofs_dir(self.challenge) / f"{node_id}.lean"
+        return f.read_text(encoding="utf-8") if f.exists() else None
 
     # ---- counters ----
 

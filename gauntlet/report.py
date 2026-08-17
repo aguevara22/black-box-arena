@@ -38,7 +38,7 @@ def drift_check(manifest, report) -> list[str]:
         missing = [gate for gate in claim.gates if gate not in gates]
         for gate in missing:
             warnings.append(f"claim {claim.id} gate missing from report: {gate}")
-        if claim.status in {"exact", "proved_small", "proved"}:
+        if claim.status in {"exact", "proved_small", "proved_modulo", "proved"}:
             present_checks = [
                 check
                 for gate in claim.gates

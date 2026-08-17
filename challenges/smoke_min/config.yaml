@@ -1,0 +1,35 @@
+# Minimal mathlib-free challenge used by the arena smoke test.
+
+challenge:
+  name: smoke_min
+  display_name: "Double distributes over addition"
+
+kernel:
+  enabled: true
+  uses_mathlib: false
+  description: >
+    Lean 4 kernel over the frozen Defs (Arena.double). Submit eval jobs to
+    compute values, proof jobs to certify lemmas, skeleton jobs to certify
+    decompositions.
+  timeout_seconds: 60
+  max_timeout_seconds: 120
+  max_concurrent_builds: 1
+  lease_ttl_seconds: 1800
+
+hygiene:
+  goal_def: Arena.GoalStatement
+  import_allowlist: [Defs, Goal]
+
+daemon:
+  host: 127.0.0.1
+  port: 8787
+
+contestants:
+  - { id: claude, advisor: openai, advisor_env: OPENAI_API_KEY }
+  - { id: codex, advisor: gemini, advisor_env: GEMINI_API_KEY }
+
+historian:
+  enabled: false
+
+breakthroughs:
+  allow_predictive_promotion: true

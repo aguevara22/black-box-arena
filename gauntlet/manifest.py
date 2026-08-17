@@ -5,7 +5,20 @@ import json
 from pathlib import Path
 
 
-STATUS_ORDER = ["conjectured", "numeric", "exact", "proved_small", "proved"]
+# Two ladders share one ordering. Numeric instances (the original method):
+#   conjectured → numeric → exact → proved_small → proved
+# Lean-proof instances (collaborative proof arena consolidation):
+#   conjectured → formalized → sketch → proved_modulo → proved
+STATUS_ORDER = [
+    "conjectured",
+    "numeric",
+    "formalized",
+    "sketch",
+    "exact",
+    "proved_small",
+    "proved_modulo",
+    "proved",
+]
 
 
 @dataclass
@@ -17,6 +30,8 @@ class Claim:
     proof_ref: str = ""
     gates: list[str] = field(default_factory=list)
     depends_on: list[str] = field(default_factory=list)
+    lean_decl: str = ""  # Lean declaration name, for proof-arena instances
+    node_id: str = ""  # arena DAG node id this claim consolidates
 
 
 @dataclass

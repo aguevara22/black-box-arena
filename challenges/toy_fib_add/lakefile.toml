@@ -1,0 +1,13 @@
+name = "toy_fib_add"
+defaultTargets = ["Defs", "Goal"]
+
+[[lean_lib]]
+name = "Defs"
+
+[[lean_lib]]
+name = "Goal"
+needs = ["Defs"]
+
+[[lean_lib]]
+name = "Calibration"
+needs = ["Defs"]

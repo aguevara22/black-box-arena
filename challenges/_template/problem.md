@@ -1,22 +1,29 @@
-# Problem: replace this title
+# Replace this title
 
-State the task, valid inputs, sealed-oracle outputs, calibration rows, and the
-effective construction expected from contestants. Include a deliberate
-symmetry clue without disclosing the answer.
+State the theorem informally here, then point at the frozen formal artifacts:
 
-## Interaction
+- `Defs/` — the definitions layer (what the objects are). Importable as
+  `Defs.<Module>`; contestants may use it, never redefine it.
+- `Goal.lean` — the target, stated as `def Arena.GoalStatement : Prop := ...`.
+  The winning root proof must elaborate against it (defeq fidelity).
 
-Use `arena/client.py` for snapshots, oracle calls, findings, breakthroughs,
-turn records, finish proposals, and peer verification. Do not inspect
-`oracle.py`.
+## Calibration
+
+Give a table of concrete instances certified by kernel computation in
+`Calibration/` (they compile at daemon startup, or the daemon refuses to
+serve). Include at least two rows related by a nontrivial symmetry of the
+underlying object, and say so.
+
+## Task
+
+Build the proof as a DAG: propose decompositions (skeleton jobs — the parent
+proved from children declared `sorry`), claim leaves, prove them, and finish
+with a root proof. Every claim must cite kernel evidence (a check job id).
 
 ## Finish criteria
 
-If `config.yaml` enables `finish_gate`, include one line per checked case:
-
-```text
-EVIDENCE: input=<json> | tags=<comma-list> | oracle=<int or wall> | proposed=<int or wall> | match=yes|no
-```
-
-Every such line must parse. At least `min_rows` lines must say `match=yes`,
-and every configured tag must occur on a matching line.
+- Root proof elaborates against `Arena.GoalStatement`.
+- `#print axioms` of the audited declaration stays within the allowed set —
+  no `sorryAx`, no new axioms.
+- Peer verification is statement fidelity: the other contestant confirms
+  `Defs/` and `Goal.lean` formalize what this document says, then agrees.

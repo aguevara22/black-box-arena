@@ -1,0 +1,33 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["8475a37e3c552d4d.olean"],
+  "m": false,
+  "i": "48bea546be16364c.ilean",
+  "c": "98fb52643743c0e0.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/Users/alfredoguevara/Library/Mobile Documents/com~apple~CloudDocs/colaborative proof/black-box-arena/example_toyfib/out/consolidation/.lake/build/lib/lean /Users/alfredoguevara/.elan/toolchains/leanprover--lean4---v4.33.0/bin/lean /Users/alfredoguevara/Library/Mobile Documents/com~apple~CloudDocs/colaborative proof/black-box-arena/example_toyfib/out/consolidation/Defs.lean -o /Users/alfredoguevara/Library/Mobile Documents/com~apple~CloudDocs/colaborative proof/black-box-arena/example_toyfib/out/consolidation/.lake/build/lib/lean/Defs.olean -i /Users/alfredoguevara/Library/Mobile Documents/com~apple~CloudDocs/colaborative proof/black-box-arena/example_toyfib/out/consolidation/.lake/build/lib/lean/Defs.ilean -c /Users/alfredoguevara/Library/Mobile Documents/com~apple~CloudDocs/colaborative proof/black-box-arena/example_toyfib/out/consolidation/.lake/build/ir/Defs.c --setup /Users/alfredoguevara/Library/Mobile Documents/com~apple~CloudDocs/colaborative proof/black-box-arena/example_toyfib/out/consolidation/.lake/build/ir/Defs.setup.json --json",
+   "level": "trace"}],
+ "inputs":
+ [["deps",
+   [["consolidation/Defs:extraDep",
+     [["@consolidation:extraDep", "00000000000006bb"]]],
+    ["imports",
+     [["Defs.Basic transitive imports (legacy)", "00000000000006bb"],
+      ["Defs.Basic:importAllArts", "abe58399ad58de52"]]]]],
+  ["libs",
+   [["import dynlibs", "00000000000006bb"],
+    ["package external libraries", "00000000000006bb"],
+    ["module dynlibs", "00000000000006bb"],
+    ["module plugins", "00000000000006bb"]]],
+  ["Lean 4.33.0, commit d8b18978322de05a8f3dba51ef03cf5461676c17",
+   "3eca9d16ab6c877d"],
+  ["/Users/alfredoguevara/Library/Mobile Documents/com~apple~CloudDocs/colaborative proof/black-box-arena/example_toyfib/out/consolidation/Defs.lean",
+   "4c4f78e1d4460ecc"],
+  ["options", "00000000000006bb"],
+  ["isModule: false", "feefd2a0d3a1847e"],
+  ["Module.name: Defs", "92b0fd711826d2be"],
+  ["Package.id?: (some consolidation)", "05d1ee1bc566e25d"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "bac67c700377e3a8"}
