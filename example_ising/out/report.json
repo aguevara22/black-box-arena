@@ -35,7 +35,7 @@
         "time_budget_s": null,
         "tol": 1e-08
       },
-      "runtime_s": 0.0022660310205537826,
+      "runtime_s": 0.0032533330086153,
       "seed": 11395094113341057523,
       "title": "Manifest and independence checks",
       "type": "gate",
@@ -376,7 +376,7 @@
         "time_budget_s": null,
         "tol": 1e-08
       },
-      "runtime_s": 0.055833016987890005,
+      "runtime_s": 0.027300374989863485,
       "seed": 2080870939503317201,
       "title": "Independent Ising oracle routes",
       "type": "gate",
@@ -772,7 +772,7 @@
         "time_budget_s": null,
         "tol": 1e-08
       },
-      "runtime_s": 0.015107533981790766,
+      "runtime_s": 0.006718042015563697,
       "seed": 11460167044428076795,
       "title": "Ising bijection symmetries",
       "type": "gate",
@@ -784,7 +784,7 @@
           "config": "sample=1/6 B=4 G=9 cfg=(2, {}, (1, -3))",
           "criterion": "rounded inverse DFT equals exact Z and residual is below tolerance",
           "extra": {},
-          "measured": "max_residual=1.167e-15",
+          "measured": "max_residual=9.252e-16",
           "name": "dos-reconstruction",
           "runtime_s": 0.0,
           "verdict": "PASS"
@@ -793,7 +793,7 @@
           "config": "sample=2/6 B=3 G=7 cfg=(2, {(0, 1): 1}, (0, -2))",
           "criterion": "rounded inverse DFT equals exact Z and residual is below tolerance",
           "extra": {},
-          "measured": "max_residual=9.108e-16",
+          "measured": "max_residual=9.558e-16",
           "name": "dos-reconstruction",
           "runtime_s": 0.0,
           "verdict": "PASS"
@@ -802,7 +802,7 @@
           "config": "sample=3/6 B=19 G=39 cfg=(5, {(0, 1): -1, (0, 2): 1, (1, 2): -3, (2, 3): -3, (3, 4): 3}, (-1, 1, 3, -2, 1))",
           "criterion": "rounded inverse DFT equals exact Z and residual is below tolerance",
           "extra": {},
-          "measured": "max_residual=2.039e-14",
+          "measured": "max_residual=1.992e-14",
           "name": "dos-reconstruction",
           "runtime_s": 0.0,
           "verdict": "PASS"
@@ -811,7 +811,7 @@
           "config": "sample=4/6 B=3 G=7 cfg=(2, {}, (-1, 2))",
           "criterion": "rounded inverse DFT equals exact Z and residual is below tolerance",
           "extra": {},
-          "measured": "max_residual=9.447e-16",
+          "measured": "max_residual=9.026e-16",
           "name": "dos-reconstruction",
           "runtime_s": 0.0,
           "verdict": "PASS"
@@ -820,7 +820,7 @@
           "config": "sample=5/6 B=4 G=9 cfg=(2, {(0, 1): -1}, (0, -3))",
           "criterion": "rounded inverse DFT equals exact Z and residual is below tolerance",
           "extra": {},
-          "measured": "max_residual=1.167e-15",
+          "measured": "max_residual=9.252e-16",
           "name": "dos-reconstruction",
           "runtime_s": 0.0,
           "verdict": "PASS"
@@ -829,7 +829,7 @@
           "config": "sample=6/6 B=3 G=7 cfg=(2, {}, (3, 0))",
           "criterion": "rounded inverse DFT equals exact Z and residual is below tolerance",
           "extra": {},
-          "measured": "max_residual=2.239e-15",
+          "measured": "max_residual=2.216e-15",
           "name": "dos-reconstruction",
           "runtime_s": 0.0,
           "verdict": "PASS"
@@ -840,7 +840,7 @@
           "extra": {
             "escalation": "large-B"
           },
-          "measured": "max_residual=5.861e-14",
+          "measured": "max_residual=5.433e-14",
           "name": "dos-reconstruction",
           "runtime_s": 0.0,
           "verdict": "PASS"
@@ -880,7 +880,7 @@
         "time_budget_s": null,
         "tol": 1e-08
       },
-      "runtime_s": 0.05573051198734902,
+      "runtime_s": 0.024954209016868845,
       "seed": 6072100363047289431,
       "title": "DFT density-of-states construction",
       "type": "gate",
@@ -988,15 +988,13 @@
           "verdict": "PASS"
         },
         {
-          "config": "upper-rung=1/1 B=151 cfg=(9, {(0, 1): 5, (0, 2): 4, (0, 3): 4, (0, 4): 4, (0, 5): 4, (0, 6): 4, (0, 7): 4, (0, 8): 4, (1, 2): 4, (1, 3): 4, (1, 4): 4, (1, 5): 4, (1, 6): 4, (1, 7): 4, (1, 8): 4, (2, 3): 4, (2, 4): 4, (2, 5): 4, (2, 6): 4, (2, 7): 4, (2, 8): 4, (3, 4): 4, (3, 5): 4, (3, 6): 4, (3, 7): 4, (3, 8): 4, (4, 5): 4, (4, 6): 4, (4, 7): 4, (4, 8): 4, (5, 6): 4, (5, 7): 4, (5, 8): 4, (6, 7): 4, (6, 8): 4, (7, 8): 4}, (2, 2, 2, 0, 0, 0, 0, 0, 0))",
-          "criterion": "the extracted E0 and g0 equal the exact oracle values",
-          "extra": {
-            "escalation": "mpmath-dps60"
-          },
-          "measured": "E0=-151 g0=1 residual=1.45519152283669e-11 exact=(-151, 1)",
+          "config": "upper-rung=1/1 cfg=(9, {(0, 1): 5, (0, 2): 4, (0, 3): 4, (0, 4): 4, (0, 5): 4, (0, 6): 4, (0, 7): 4, (0, 8): 4, (1, 2): 4, (1, 3): 4, (1, 4): 4, (1, 5): 4, (1, 6): 4, (1, 7): 4, (1, 8): 4, (2, 3): 4, (2, 4): 4, (2, 5): 4, (2, 6): 4, (2, 7): 4, (2, 8): 4, (3, 4): 4, (3, 5): 4, (3, 6): 4, (3, 7): 4, (3, 8): 4, (4, 5): 4, (4, 6): 4, (4, 7): 4, (4, 8): 4, (5, 6): 4, (5, 7): 4, (5, 8): 4, (6, 7): 4, (6, 8): 4, (7, 8): 4}, (2, 2, 2, 0, 0, 0, 0, 0, 0))",
+          "criterion": "skipped",
+          "extra": {},
+          "measured": "mpmath unavailable \u2014 large-B ground-state configs skipped",
           "name": "ground-state-extraction",
           "runtime_s": 0.0,
-          "verdict": "PASS"
+          "verdict": "SKIP"
         }
       ],
       "claim_ids": [
@@ -1004,8 +1002,8 @@
       ],
       "gate_id": "ising-gs",
       "n_fail": 0,
-      "n_pass": 12,
-      "n_skip": 0,
+      "n_pass": 11,
+      "n_skip": 1,
       "policy_snapshot": {
         "notes": "Residuals are measured; exact integer recovery decides the verdict.",
         "precision_stages": [
@@ -1037,7 +1035,7 @@
         "time_budget_s": null,
         "tol": 1e-08
       },
-      "runtime_s": 0.2303646850050427,
+      "runtime_s": 0.0011940419790335,
       "seed": 7438349913205156867,
       "title": "Radius ground-state construction",
       "type": "gate",
@@ -1093,7 +1091,7 @@
         "time_budget_s": null,
         "tol": 0.01
       },
-      "runtime_s": 0.00022306200116872787,
+      "runtime_s": 7.141701644286513e-05,
       "seed": 15707676606559756478,
       "title": "Radius convergence probe",
       "type": "gate",
@@ -1102,7 +1100,7 @@
     {
       "checks": [
         {
-          "config": "/Users/alfredoguevara/Library/Mobile Documents/com~apple~CloudDocs/colaborative proof/black-box-arena/example_ising/artifacts/census_triangle_L3.json",
+          "config": "example_ising/artifacts/census_triangle_L3.json",
           "criterion": "artifact code hashes match all current producer files",
           "extra": {
             "reasons": []
@@ -1218,7 +1216,7 @@
         "time_budget_s": null,
         "tol": 1e-08
       },
-      "runtime_s": 0.0013513189915101975,
+      "runtime_s": 0.0011131670034956187,
       "seed": 1357122036247438983,
       "title": "Provenance-checked triangle census",
       "type": "gate",
@@ -1229,7 +1227,7 @@
     "instance": "example_ising",
     "quick": true,
     "root_seed": 2026,
-    "started_utc": "2026-08-15T20:37:17.439719+00:00",
+    "started_utc": "2026-09-06T05:52:14.984672+00:00",
     "type": "meta"
   },
   "summary": {
@@ -1238,8 +1236,8 @@
       "checks": 106,
       "fail": 0,
       "gates": 7,
-      "pass": 106,
-      "skip": 0
+      "pass": 105,
+      "skip": 1
     },
     "type": "summary"
   }

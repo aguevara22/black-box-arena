@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CHALLENGE="${1:-ising_lift}"
+CHALLENGE="${1:-smoke_min}"
 LABEL="com.research.arena-daemon"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 PROJECT="$(cd "$HERE/../.." && pwd)"
@@ -26,7 +26,7 @@ cat > "$PLIST" <<PLIST
   <key>ProgramArguments</key>
   <array>
     <string>${PYTHON}</string>
-    <string>${PROJECT}/arena/oracle_daemon.py</string>
+    <string>${PROJECT}/arena/daemon.py</string>
     <string>--challenge</string>
     <string>${CHALLENGE}</string>
   </array>

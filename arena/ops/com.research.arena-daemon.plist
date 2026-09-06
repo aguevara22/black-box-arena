@@ -7,9 +7,9 @@
   <key>ProgramArguments</key>
   <array>
     <string>/path/to/shipping/.venv/bin/python</string>
-    <string>/path/to/shipping/arena/oracle_daemon.py</string>
+    <string>/path/to/shipping/arena/daemon.py</string>
     <string>--challenge</string>
-    <string>ising_lift</string>
+    <string>smoke_min</string>
   </array>
   <key>WorkingDirectory</key>
   <string>/path/to/shipping</string>

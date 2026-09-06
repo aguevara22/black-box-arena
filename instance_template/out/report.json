@@ -35,7 +35,7 @@
         "time_budget_s": null,
         "tol": 1e-08
       },
-      "runtime_s": 0.0007263339939527214,
+      "runtime_s": 0.0018714169855229557,
       "seed": 11395094113341057523,
       "title": "Manifest and independence checks",
       "type": "gate",
@@ -47,7 +47,7 @@
           "config": "template-example",
           "criterion": "gate completes without an exception",
           "extra": {
-            "traceback": "Traceback (most recent call last):\n  File \"/Users/aguevaragonzalez/Library/Mobile Documents/com~apple~CloudDocs/push Fab/shipping/gauntlet/runner.py\", line 123, in run\n    gate.fn(ctx)\n    ~~~~~~~^^^^^\n  File \"/Users/aguevaragonzalez/Library/Mobile Documents/com~apple~CloudDocs/push Fab/shipping/instance_template/gates/gate_example.py\", line 10, in _run\n    raise NotImplementedError(\"TODO: replace the example gate with a real claim check\")\nNotImplementedError: TODO: replace the example gate with a real claim check\n"
+            "traceback": "Traceback (most recent call last):\n  File \"./gauntlet/runner.py\", line 124, in run\n    gate.fn(ctx)\n  File \"./instance_template/gates/gate_example.py\", line 10, in _run\n    raise NotImplementedError(\"TODO: replace the example gate with a real claim check\")\nNotImplementedError: TODO: replace the example gate with a real claim check\n"
           },
           "measured": "NotImplementedError: TODO: replace the example gate with a real claim check",
           "name": "unhandled-exception",
@@ -73,7 +73,7 @@
         "time_budget_s": null,
         "tol": 1e-08
       },
-      "runtime_s": 0.000385124993044883,
+      "runtime_s": 0.0003351250197738409,
       "seed": 127807732688072412,
       "title": "Unimplemented example gate",
       "type": "gate",
@@ -84,7 +84,7 @@
     "instance": "instance_template",
     "quick": false,
     "root_seed": 2026,
-    "started_utc": "2026-07-21T15:54:52.079865+00:00",
+    "started_utc": "2026-09-06T05:52:15.122975+00:00",
     "type": "meta"
   },
   "summary": {

@@ -14,6 +14,7 @@ import traceback
 
 from .gate import Gate, GateContext, GateResult
 from .independence import lint
+from .paths import scrub_paths
 from .policy import Policy, derive_seed
 
 
@@ -128,7 +129,7 @@ def run(
                 False,
                 "gate completes without an exception",
                 measured=f"{type(exc).__name__}: {exc}",
-                extra={"traceback": traceback.format_exc()},
+                extra={"traceback": scrub_paths(traceback.format_exc())},
             )
         results.append(
             GateResult(

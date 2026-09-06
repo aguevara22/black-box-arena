@@ -1,1 +1,0 @@
-{"decls":{"Arena.double":[7,0,9,25,7,4,7,10]},"directImports":[],"module":"Defs.Basic","references":{"{\"c\":{\"m\":\"Defs.Basic\",\"n\":\"Arena.double\"}}":{"definition":[7,4,7,10],"usages":[[9,13,9,19,"Arena.double"]]},"{\"c\":{\"m\":\"Init.Prelude\",\"n\":\"Nat\"}}":{"definition":null,"usages":[[7,13,7,16,"Arena.double"],[7,19,7,22,"Arena.double"]]}},"version":5}

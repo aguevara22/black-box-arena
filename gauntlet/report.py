@@ -3,10 +3,12 @@
 import json
 from pathlib import Path
 
+from .paths import display_path
+
 
 def load_report(jsonl_path) -> dict:
     source = Path(jsonl_path)
-    report = {"source": str(source), "meta": {}, "gates": {}, "summary": {}}
+    report = {"source": display_path(source), "meta": {}, "gates": {}, "summary": {}}
     with source.open(encoding="utf-8") as stream:
         for raw_line in stream:
             record = json.loads(raw_line)

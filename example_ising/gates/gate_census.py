@@ -1,6 +1,7 @@
 """Fresh triangle census and seeded signature prediction checks."""
 
 from gauntlet.gate import Gate
+from gauntlet.paths import display_path
 from gauntlet.policy import Policy
 from gauntlet.provenance import load_artifact
 
@@ -33,7 +34,7 @@ def _run(ctx):
         census.build_census(L=3)
         ctx.check(
             "artifact-built",
-            str(census.ARTIFACT),
+            display_path(census.ARTIFACT),
             True,
             "missing census artifact is rebuilt before use",
         )
@@ -41,7 +42,7 @@ def _run(ctx):
     payload, _, stale, reasons = load_artifact(census.ARTIFACT, census.code_files())
     ctx.check(
         "provenance-fresh",
-        str(census.ARTIFACT),
+        display_path(census.ARTIFACT),
         not stale,
         "artifact code hashes match all current producer files",
         measured="fresh" if not stale else "; ".join(reasons),

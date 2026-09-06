@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CHALLENGE="${1:-ising_lift}"
+CHALLENGE="${1:-smoke_min}"
 LABEL="com.research.arena-daemon"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 PROJECT="$(cd "$HERE/../.." && pwd)"
@@ -13,7 +13,7 @@ launchctl list | grep -F "$LABEL" || echo "  (not loaded)"
 
 echo
 echo "== process =="
-pgrep -fl "oracle_daemon.py.*--challenge ${CHALLENGE}" || pgrep -fl oracle_daemon.py || echo "  (no oracle_daemon.py process running)"
+pgrep -fl "daemon.py.*--challenge ${CHALLENGE}" || pgrep -fl "arena/daemon.py" || echo "  (no arena daemon process running)"
 
 echo
 echo "== daemon health =="

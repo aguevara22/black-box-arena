@@ -13,3 +13,6 @@ report/*.toc
 report/*.fls
 report/*.fdb_latexmk
 report/*.synctex.gz
+# build trees and Lean-dependent generated demo output never enter the repo
+.lake/
+example_toyfib/out/

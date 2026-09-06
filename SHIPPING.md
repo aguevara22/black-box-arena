@@ -27,7 +27,7 @@ problem, and what is deliberately out of scope.
 
 ```sh
 python3 -m venv .venv && .venv/bin/pip install -r arena/requirements.txt
-.venv/bin/python arena/oracle_daemon.py --challenge ising_lift   # shell 1
+.venv/bin/python arena/daemon.py --challenge smoke_min          # shell 1
 python3 arena/client.py health                                    # shell 2
 python3 arena/smoke_arena.py          # scripted two-contestant end-to-end run
 python3 run_demo.py                   # evidence-kit suite (stdlib only)
