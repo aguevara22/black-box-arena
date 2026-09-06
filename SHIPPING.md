@@ -27,18 +27,22 @@ problem, and what is deliberately out of scope.
 
 ```sh
 python3 -m venv .venv && .venv/bin/pip install -r arena/requirements.txt
-.venv/bin/python arena/daemon.py --challenge smoke_min          # shell 1
+.venv/bin/python arena/smoke_oracle.py   # oracle regime: scripted two-contestant run, no Lean needed
+.venv/bin/python arena/daemon.py --challenge ising_lift          # shell 1 (oracle regime)
+.venv/bin/python arena/daemon.py --challenge smoke_min           # shell 1 (kernel regime; needs elan)
 python3 arena/client.py health                                    # shell 2
-python3 arena/smoke_arena.py          # scripted two-contestant end-to-end run
-python3 run_demo.py                   # evidence-kit suite (stdlib only)
+.venv/bin/python arena/smoke_arena.py    # kernel regime: scripted run (needs elan)
+python3 run_demo.py                      # evidence-kit suite (stdlib only)
 ```
 
-`smoke_arena.py` drives two scripted contestants through the full funnel —
-oracle queries (with a predict-before-query promotion), findings,
-breakthrough promotion by cross-confirmation, a mechanically gated finish,
+`smoke_oracle.py` drives two scripted contestants through the full oracle
+funnel — sealed queries (with a predict-before-query promotion), findings,
+breakthrough promotion by cross-confirmation, the mechanically gated finish,
 peer verification, SOLVED — against a throwaway state directory, and asserts
-the state layout afterward. It is the arena's integration test, not a
-substitute for real LLM contestants.
+the state layout afterward. `smoke_arena.py` does the same for the kernel
+regime on `smoke_min`. They are the arena's integration tests, not a
+substitute for real LLM contestants. Which checks run automatically and
+which you must run by hand is stated in README.md, "Verify before you push".
 
 ## Run it for real
 

@@ -83,6 +83,8 @@ def ensure_state_layout(challenge: str) -> None:
         "finish.jsonl",
         "jobs.jsonl",
         "dag.jsonl",
+        "oracle_log.md",
+        "oracle_log.jsonl",
     ):
         f = shared / fname
         if not f.exists():

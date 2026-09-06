@@ -128,6 +128,38 @@ python3 arena/client.py verify --proposal-id "<id>" --agree \
 The daemon writes `SOLVED` only after peer agreement. Correct an entry by
 appending a superseding entry; never rewrite history.
 
+## Oracle regime (`ground_truth: oracle`)
+
+In a numeric challenge there is no kernel and no DAG; the daemon serves a
+sealed oracle instead, and the tick is: snapshot → think → **predict, then
+query** → post → turn. Everything else above holds.
+
+```sh
+python3 arena/client.py oracle --input '<json matching the input schema>' \
+  --predict '<json: the output you expect>' --hypothesis "what a hit confirms"
+```
+
+A query may carry a pre-registered prediction; a correct prediction with a
+hypothesis promotes the hypothesis to a breakthrough (`predictive_match`).
+Every response is correlated by request id and input hash and logged
+append-only; a cache hit is served only from a correlated, current-version
+record. Breakthroughs posted with `breakthrough --text` are promoted only by
+independent cross-agent confirmation (another contestant's own entries
+corroborate them) or, if the challenge enables it, an adversarial critic;
+otherwise they land as `[unpromoted breakthrough candidate]` findings.
+
+A finish must carry the evidence matrix `config.yaml`'s `finish_gate`
+demands — one row per oracle-checked input, tagged with the coverage class
+it exhibits — or the daemon rejects it before any peer sees it:
+
+```text
+EVIDENCE: input={"n":2,"edges":[],"fields":[1,2]} | tags=n2,fields | oracle=0 | proposed=0 | match=yes
+```
+
+Peer verification is unchanged: only the other contestant may agree, the
+daemon re-checks the gate on the stored proposal, and SOLVED is written by
+the daemon alone.
+
 ## Command summary
 
 | Command | Effect |
@@ -136,7 +168,8 @@ appending a superseding entry; never rewrite history.
 | `problem` | contestant statement and kernel description |
 | `snapshot` | private continuity plus recent shared state |
 | `dag [--frontier]` | proof DAG view / claimable nodes |
-| `check` | submit a kernel job (eval, proof, skeleton) |
+| `oracle` | one sealed-oracle query, optionally pre-registered (oracle regime) |
+| `check` | submit a kernel job (eval, proof, skeleton) (kernel regime) |
 | `job --id` | poll a job |
 | `claim` / `release` | lease a node / give it back |
 | `decompose` | propose a kernel-checked decomposition |

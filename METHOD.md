@@ -207,12 +207,12 @@ laddered, machine-checked claims.
 |---|---|
 | Daemon sovereignty, funnel, finish gate | `arena/daemon.py`, `arena/state_manager.py` |
 | Contestant tick protocol | `CONTESTANT.md`, `arena/client.py` |
-| Sealed oracle subprocess + request correlation | `arena/protocol.py` (request correlation); the sealed-oracle worker of v0.2 (`oracle_worker.py`, `oracle_runner.py`) returns in v0.3 beside the kernel |
+| Sealed oracle subprocess + request correlation (`ground_truth: oracle`) | `arena/oracle_runner.py`, `arena/oracle_worker.py`, `arena/oracle_protocol.py`; kernel jobs correlate through `arena/protocol.py` |
 | Breakthrough promotion (three paths) | `arena/promotion.py` |
 | Advisor with fail-closed spend cap | `arena/advisor.py` |
 | Non-directive historian | `arena/historian.py` |
 | Read-only dashboard / status | `arena/manager.py`, `arena/status.py` |
-| Challenge modularity | `challenges/_template/`, `challenges/smoke_min/`, `challenges/_archive/ising_lift/` |
+| Challenge modularity | `challenges/_template/`, `challenges/ising_lift/` (oracle), `challenges/smoke_min/` (kernel) |
 | Evidence kit (routes, gates, ladder, provenance, lint, tables) | `gauntlet/`, `example_ising/`, `instance_template/` |
 
 Adoption checklist: `SHIPPING.md`. Full prose report: `report/`.

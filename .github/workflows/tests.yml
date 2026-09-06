@@ -1,0 +1,32 @@
+name: tests
+
+# What runs automatically on every push and pull request:
+#   1. the unit suite (arena/tests), which includes the portability guard
+#      that fails on any tracked file carrying a home directory or build tree;
+#   2. the oracle-regime end-to-end smoke (no Lean toolchain needed).
+# What does NOT run here and must be run by hand before a release — see
+# README.md "Verify before you push": the kernel-regime smoke
+# (arena/smoke_arena.py) needs elan and a Lean toolchain download.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  suite:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: python -m pip install -r arena/requirements.txt pytest
+      - name: Unit suite (includes the portability guard)
+        run: python -m pytest arena/tests -q -p no:cacheprovider
+      - name: Oracle-regime end-to-end smoke
+        run: python arena/smoke_oracle.py

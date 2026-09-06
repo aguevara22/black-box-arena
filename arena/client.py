@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Thin stdlib-only client for the Lean-kernel arena daemon.
+"""Thin stdlib-only client for the arena daemon (Lean kernel or sealed oracle).
 
 Contestants (e.g. `codex` / `claude`) interact with the shared kernel +
 blackboard ONLY through this client. No third-party deps, so it runs under any
@@ -13,6 +13,8 @@ Examples:
   client.py health
   client.py problem
   client.py snapshot --contestant-id codex
+  client.py oracle --input '{"n":2,"edges":[],"fields":[1,2]}' \
+      --predict '{"status":"ok","coefficient":0}' --hypothesis "fields alone give 0"
   client.py check --mode eval --file probe.lean --wait
   client.py check --mode proof --decl double_zero --file proof.lean \
       --predict ok --hypothesis "double 0 = 0 closes by rfl" --wait
@@ -101,6 +103,13 @@ def main() -> int:
     sub.add_parser("problem", parents=[common])
     sub.add_parser("snapshot", parents=[common])
 
+    # ground_truth: oracle — one sealed-oracle query, optionally pre-registered
+    p_oracle = sub.add_parser("oracle", parents=[common])
+    p_oracle.add_argument("--input", required=True, help="JSON matching the oracle input schema")
+    p_oracle.add_argument("--predict", default=None, help="optional JSON: the expected oracle output")
+    p_oracle.add_argument("--hypothesis", default=None, help="promoted to breakthrough if the prediction matches")
+    p_oracle.add_argument("--timeout", type=int, default=None)
+
     p_check = sub.add_parser("check", parents=[common])
     p_check.add_argument("--mode", required=True, choices=["eval", "proof", "skeleton"])
     p_check.add_argument("--file", default=None, help="Lean source file, or '-' for stdin")
@@ -181,6 +190,15 @@ def main() -> int:
             payload = {"ok": False, "error": "snapshot requires --contestant-id or $CONTESTANT_ID"}
         else:
             payload = _request("GET", f"{base}/snapshot?contestant_id={urllib.parse.quote(cid)}")
+    elif cmd == "oracle":
+        body = {"contestant_id": cid, "input": _parse_json("--input", args.input)}
+        if args.predict is not None:
+            body["predict"] = _parse_json("--predict", args.predict)
+        if args.hypothesis is not None:
+            body["hypothesis"] = args.hypothesis
+        if args.timeout is not None:
+            body["timeout"] = args.timeout
+        payload = _request("POST", f"{base}/oracle", body, timeout=(args.timeout or 60) + 30)
     elif cmd == "check":
         source = None
         if args.file:

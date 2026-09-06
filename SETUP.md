@@ -41,7 +41,34 @@ Run commands from the repo root. Python 3.11 or newer is recommended.
 For long live sessions prefer a local `ORACLE_STATE_ROOT` too: iCloud
 eviction can stall the `fsync` on every append.
 
-## Arena quickstart
+## Numeric challenges: the sealed oracle (`ground_truth: oracle`)
+
+The worked example is `challenges/ising_lift` (a sealed classical coefficient
+over weighted graphs; contestants must construct the polynomial lift whose
+extraction reproduces it). Its `oracle.py` is imported only by the daemon's
+worker subprocess (`arena/oracle_worker.py`, POSIX only: it uses
+`signal.alarm` for the per-query timeout).
+
+```sh
+.venv/bin/python arena/daemon.py --challenge ising_lift          # shell 1
+python3 arena/client.py health                                    # shell 2
+python3 arena/client.py oracle --contestant-id claude \
+  --input '{"n":2,"edges":[],"fields":[1,2]}' \
+  --predict '{"status":"ok","coefficient":0}' --hypothesis "fields alone give 0"
+python3 arena/smoke_oracle.py     # deterministic end-to-end retest, temp state, no Lean
+```
+
+Every oracle call is logged to `state/<challenge>/shared/oracle_log.jsonl`
+with the request id and input hash the daemon correlated it by; a finish
+proposal must carry the `EVIDENCE:` rows `config.yaml`'s `finish_gate`
+demands (see CONTESTANT.md).
+
+To add an oracle challenge: copy `challenges/_template/`, set
+`ground_truth: oracle`, `kernel.enabled: false`, fill `oracle.py :: query`,
+the `oracle.input_schema`, and `finish_gate`; keep the answer key out of
+every open file. Skip the Lean files entirely.
+
+## Arena quickstart (kernel regime)
 
 Start the smoke challenge daemon (first boot materializes the workspace and
 builds the frozen libraries — seconds for mathlib-free challenges, minutes

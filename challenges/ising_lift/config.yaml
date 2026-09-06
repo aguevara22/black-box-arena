@@ -2,6 +2,13 @@ challenge:
   name: ising_lift
   display_name: "Weighted-Graph Quantum Lift"
 
+# The numeric regime: the daemon serves the sealed oracle in this directory
+# (oracle.py :: query(payload)) from a worker subprocess; the Lean kernel is off.
+ground_truth: oracle
+
+kernel:
+  enabled: false
+
 oracle:
   enabled: true
   description: "Integer coefficient or wall status for a weighted graph with vertex fields."

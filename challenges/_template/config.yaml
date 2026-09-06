@@ -16,6 +16,13 @@ challenge:
   name: _template
   display_name: "Replace this title"
 
+# ground_truth selects what the daemon serves as the only admissible evidence:
+#   kernel  — the Lean 4 kernel over the frozen Defs/Goal (proof challenges)
+#   oracle  — a sealed numeric oracle, this directory's oracle.py, imported only
+#             inside the daemon's worker subprocess (numeric identification and
+#             construction challenges; see challenges/ising_lift for a worked one)
+ground_truth: kernel
+
 kernel:
   enabled: true
   uses_mathlib: false
@@ -37,6 +44,18 @@ hygiene:
   goal_def: Arena.GoalStatement
   # goal_sha256: ""   # optional: sha256 of Goal.lean; daemon refuses to boot on mismatch
 
+# Oracle regime only (ground_truth: oracle). Copy the block from
+# challenges/ising_lift/config.yaml and set kernel.enabled: false.
+# oracle:
+#   enabled: true
+#   description: "one sentence a contestant may read about the black box"
+#   timeout_seconds: 10
+#   input_schema: { ... JSON Schema for query payloads ... }
+#   output_schema: { ... }
+# finish_gate:            # mechanical evidence-matrix gate on finish proposals
+#   min_rows: 12          # parsed match=yes EVIDENCE rows
+#   required_tags: [...]  # coverage classes every finish must exhibit
+
 daemon:
   host: 127.0.0.1
   port: 8787
@@ -51,3 +70,7 @@ historian:
 
 breakthroughs:
   allow_predictive_promotion: true
+  # oracle regime only: cross-agent token-overlap confirmation and the
+  # optional LLM critic (`claude -p`, or CRITIC_COMMAND) — off by default
+  require_independent_confirmation: true
+  allow_self_flag_with_verifier: false

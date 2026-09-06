@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, Literal
 
 import yaml
+from jsonschema import Draft202012Validator
 from pydantic import BaseModel, Field
 
 
@@ -24,6 +26,29 @@ class KernelConfig(BaseModel):
     max_source_bytes: int = 262144
     lease_ttl_seconds: int = 1800
     workspace_root: str | None = None
+
+
+class OracleConfig(BaseModel):
+    """The sealed numeric oracle (`ground_truth: oracle`). The challenge ships
+    `oracle.py :: query(payload)`; only the daemon's worker subprocess ever
+    imports it, and contestants receive answers only, each correlated by
+    request id and input hash. This is the Black Box Arena v0.2 ground truth,
+    restored beside the kernel."""
+
+    enabled: bool = False
+    input_schema: dict[str, Any] = Field(default_factory=dict)
+    output_schema: dict[str, Any] = Field(default_factory=dict)
+    description: str = ""
+    timeout_seconds: int = 10
+
+
+class FinishGateConfig(BaseModel):
+    """Mechanical evidence-matrix gate on finish proposals in the oracle
+    regime: at least `min_rows` parsed `match=yes` EVIDENCE rows, covering
+    every `required_tags` entry, before a proposal can even be verified."""
+
+    min_rows: int = Field(default=0, ge=0)
+    required_tags: list[str] = Field(default_factory=list)
 
 
 class HygieneConfig(BaseModel):
@@ -55,6 +80,12 @@ class BreakthroughsConfig(BaseModel):
     # predictive match (pre-registered predict came true). The legacy
     # token-overlap and LLM-critic paths are gone.
     allow_predictive_promotion: bool = True
+    # Oracle-regime paths (`ground_truth: oracle`): independent cross-agent
+    # confirmation (token overlap with the other contestant's own entries)
+    # and an optional LLM critic that judges the claim against the cited
+    # oracle evidence. Ignored in the kernel regime.
+    require_independent_confirmation: bool = True
+    allow_self_flag_with_verifier: bool = False
 
 
 class DaemonConfig(BaseModel):
@@ -70,7 +101,13 @@ class ContestantConfig(BaseModel):
 
 class ChallengeConfig(BaseModel):
     challenge: ChallengeMeta
+    # Which ground truth the daemon serves: the Lean kernel (proof DAG,
+    # hygiene audit) or a sealed numeric oracle (predict-before-query,
+    # evidence-matrix finish gate). One daemon, one toggle.
+    ground_truth: Literal["kernel", "oracle"] = "kernel"
     kernel: KernelConfig = Field(default_factory=KernelConfig)
+    oracle: OracleConfig = Field(default_factory=OracleConfig)
+    finish_gate: FinishGateConfig | None = None
     hygiene: HygieneConfig = Field(default_factory=HygieneConfig)
     daemon: DaemonConfig = Field(default_factory=DaemonConfig)
     contestants: list[ContestantConfig] = Field(default_factory=list)
@@ -81,4 +118,16 @@ class ChallengeConfig(BaseModel):
 def load_config(path: Path) -> ChallengeConfig:
     with open(path, encoding="utf-8") as f:
         raw = yaml.safe_load(f)
-    return ChallengeConfig.model_validate(raw)
+    cfg = ChallengeConfig.model_validate(raw)
+    if cfg.ground_truth == "oracle":
+        if not cfg.oracle.enabled:
+            raise ValueError("ground_truth is 'oracle' but oracle.enabled is false")
+        if cfg.oracle.input_schema:
+            Draft202012Validator.check_schema(cfg.oracle.input_schema)
+    return cfg
+
+
+def build_input_validator(schema: dict[str, Any]) -> Draft202012Validator | None:
+    if not schema:
+        return None
+    return Draft202012Validator(schema)

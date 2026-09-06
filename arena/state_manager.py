@@ -8,9 +8,11 @@ from pathlib import Path
 from typing import Any
 
 try:
+    from .oracle_protocol import ORACLE_CACHE_VERSION, ORACLE_PROTOCOL_VERSION, oracle_input_hash
     from .protocol import canonical_json, sha256_text, short_hash
     from .utils import jsonl, paths
 except ImportError:  # direct module execution
+    from oracle_protocol import ORACLE_CACHE_VERSION, ORACLE_PROTOCOL_VERSION, oracle_input_hash
     from protocol import canonical_json, sha256_text, short_hash
     from utils import jsonl, paths
 
@@ -36,6 +38,7 @@ class BlackboardSnapshot:
     recent_findings: list[dict[str, Any]]
     recent_finish_records: list[dict[str, Any]]
     recent_jobs: list[dict[str, Any]]
+    recent_oracle_log: list[dict[str, Any]]
     last_reply: dict[str, Any] | None
     digest: str
 
@@ -97,6 +100,9 @@ class StateManager:
     def iter_dag_records(self):
         return jsonl.iter_records(self.shared / "dag.jsonl")
 
+    def recent_oracle_log(self, n: int = 30) -> list[dict[str, Any]]:
+        return jsonl.tail(self.shared / "oracle_log.jsonl", n)
+
     def last_reply(self, contestant_id: str) -> dict[str, Any] | None:
         turns = jsonl.tail(self.contestant_dir(contestant_id) / "turns.jsonl", 1)
         return turns[0] if turns else None
@@ -110,9 +116,111 @@ class StateManager:
             recent_findings=self.recent_findings(),
             recent_finish_records=self.recent_finish_records(),
             recent_jobs=self.recent_jobs(),
+            recent_oracle_log=self.recent_oracle_log(),
             last_reply=self.last_reply(contestant_id),
             digest=self.digest(),
         )
+
+    # ---- oracle log (ground_truth: oracle) ----
+    # Every oracle call is append-only and correlated: the cache honours only
+    # records whose response carries this challenge, a request id and the
+    # input hash under the current cache version. Records from before a
+    # protocol version are legacy and never served from cache (trust epochs).
+
+    async def record_oracle_prediction(
+        self,
+        contestant_id: str,
+        input_payload: Any,
+        predict: Any,
+        hypothesis: str | None,
+    ) -> dict[str, Any]:
+        rec = {
+            "ts": _ts(),
+            "phase": "predicted",
+            "contestant_id": contestant_id,
+            "input": input_payload,
+            "input_hash": oracle_input_hash(self.challenge, input_payload),
+            "predict": predict,
+            "hypothesis": hypothesis,
+            "predicted_at": _ts(),
+        }
+        async with self.lock:
+            jsonl.append(self.shared / "oracle_log.jsonl", rec)
+            with open(self.shared / "oracle_log.md", "a", encoding="utf-8") as f:
+                f.write(
+                    f"\n### {rec['ts']} — {contestant_id} predicted\n"
+                    f"input: {_canon(input_payload)}\n"
+                    f"prediction: {_canon(predict)}\n"
+                    f"hypothesis: {hypothesis or ''}\n"
+                )
+        return rec
+
+    async def record_oracle_result(
+        self,
+        contestant_id: str,
+        input_payload: Any,
+        result: dict[str, Any],
+        predict: Any = None,
+        cache_hit: bool = False,
+    ) -> dict[str, Any]:
+        ih = oracle_input_hash(self.challenge, input_payload)
+        prediction_correct: bool | None = None
+        if predict is not None and result.get("status") == "ok":
+            prediction_correct = _canon(predict) == _canon(result.get("output"))
+        protocol_verified = self._result_matches_input(result, ih)
+        rec = {
+            "ts": _ts(),
+            "phase": "executed",
+            "contestant_id": contestant_id,
+            "input": input_payload,
+            "input_hash": ih,
+            "cache_version": ORACLE_CACHE_VERSION,
+            "predict": predict,
+            "prediction_correct": prediction_correct,
+            "result": result,
+            "oracle_protocol_verified": protocol_verified,
+            "cache_hit": cache_hit,
+            "executed_at": _ts(),
+        }
+        async with self.lock:
+            jsonl.append(self.shared / "oracle_log.jsonl", rec)
+            with open(self.shared / "oracle_log.md", "a", encoding="utf-8") as f:
+                f.write(
+                    f"\n### {rec['ts']} — {contestant_id} executed\n"
+                    f"input: {_canon(input_payload)}\n"
+                    f"result: {_canon(result)}\n"
+                    f"protocol verified: {protocol_verified}\n"
+                    f"cache hit: {cache_hit}\n"
+                )
+        return rec
+
+    def _result_matches_input(self, result: dict[str, Any], input_hash: str) -> bool:
+        return (
+            isinstance(result, dict)
+            and result.get("status") == "ok"
+            and result.get("protocol_version") == ORACLE_PROTOCOL_VERSION
+            and result.get("challenge") == self.challenge
+            and isinstance(result.get("request_id"), str)
+            and result.get("input_hash") == input_hash
+        )
+
+    def _cache_record_is_valid(self, rec: dict[str, Any], input_hash: str) -> bool:
+        result = rec.get("result")
+        return (
+            rec.get("cache_version") == ORACLE_CACHE_VERSION
+            and rec.get("phase") == "executed"
+            and rec.get("input_hash") == input_hash
+            and isinstance(result, dict)
+            and self._result_matches_input(result, input_hash)
+        )
+
+    def oracle_cache_lookup(self, input_payload: Any) -> dict[str, Any] | None:
+        target = oracle_input_hash(self.challenge, input_payload)
+        latest: dict[str, Any] | None = None
+        for rec in jsonl.iter_records(self.shared / "oracle_log.jsonl"):
+            if self._cache_record_is_valid(rec, target):
+                latest = rec.get("result")
+        return latest
 
     # ---- write paths (mutations serialized by self.lock) ----
 
