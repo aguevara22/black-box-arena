@@ -45,6 +45,10 @@ DEFAULT_MAX_OUTPUT_TOKENS = 120000  # conservative xhigh reservation when the re
 # a discount). The cap is only as correct as these rates.
 # VERIFY against https://openai.com/api/pricing/  and  https://ai.google.dev/gemini-api/docs/pricing
 PRICING_USD_PER_M = {
+    # gpt-5.6-sol rates VERIFIED 2026-08-16 against developers.openai.com
+    # (pro is a MODE at the same token rates; it aggregates the model work
+    # performed, so billed output can exceed the visible answer).
+    "gpt-5.6-sol": {"input": 5.0,  "cached": 0.5, "output": 30.0},
     "gpt-5.5":     {"input": 10.0, "cached": 1.0, "output": 30.0},
     "gpt-5.5-pro": {"input": 10.0, "cached": 1.0, "output": 30.0},
     "gpt-5":       {"input": 5.0,  "cached": 0.5, "output": 15.0},
@@ -169,9 +173,12 @@ def _reserve(model: str, prompt: str, max_output_tokens: int, cap: float) -> str
     return rid
 
 
-def _settle(rid: str, model: str, usage: dict | None, cap: float) -> None:
+def _settle(rid: str, model: str, usage: dict | None, cap: float,
+            contestant: str | None = None) -> None:
     """Post-call accounting. Always drop the reservation; if usage is known,
-    charge the ACTUAL cost. Called from a finally, so it must never raise."""
+    charge the ACTUAL cost. Called from a finally, so it must never raise.
+    contestant_id is recorded per call so spend attribution never has to be
+    inferred from the model name (both contestants share one advisor model)."""
     try:
         with _ledger_lock():
             d = _load_ledger(cap)
@@ -180,6 +187,9 @@ def _settle(rid: str, model: str, usage: dict | None, cap: float) -> None:
                 c = cost_usd(model, usage)
                 d["calls"].append({
                     "ts": _ts(), "model": model,
+                    "contestant_id": contestant,
+                    "reasoning_mode": os.environ.get("ADVISOR_REASONING_MODE"),
+                    "reasoning_effort": os.environ.get("ADVISOR_REASONING_EFFORT", "xhigh"),
                     "input_tokens": int(usage.get("input_tokens") or 0),
                     "cached_tokens": int(usage.get("cached_tokens") or 0),
                     "output_tokens": int(usage.get("output_tokens") or 0),
@@ -245,6 +255,24 @@ def _extract_text(resp) -> str:
     return "\n".join(parts).strip()
 
 
+def _retrieve_openai_response(id_file: str, timeout: float = 900.0) -> tuple[str, str, dict]:
+    """Retrieve one stored OpenAI response without creating or cancelling work.
+
+    This is deliberately separate from the resumable call path: recovery after
+    a caller loses its stdout must never submit a replacement response or charge
+    the spend ledger a second time.
+    """
+    from openai import OpenAI  # type: ignore
+
+    if not os.environ.get("OPENAI_API_KEY"):
+        raise RuntimeError("OPENAI_API_KEY not set")
+    rid = open(id_file, encoding="utf-8").read().strip()
+    if not rid:
+        raise RuntimeError(f"empty response id file: {id_file}")
+    resp = OpenAI(timeout=timeout, max_retries=4).responses.retrieve(rid)
+    return getattr(resp, "status", "unknown"), _extract_text(resp), _usage_dict(resp)
+
+
 def _openai_advice(
     prompt: str,
     model: str | None,
@@ -295,10 +323,20 @@ def _openai_advice(
         raise RuntimeError("OPENAI_API_KEY not set")
 
     mdl = model or os.environ.get("OPENAI_MODEL") or "gpt-5.5"
+    # Reasoning has TWO independent axes on gpt-5.6: `effort` (low..xhigh, max)
+    # and `mode` (standard|pro). Pro is the ceiling execution mode, NOT an
+    # effort tier — mode=pro + effort=max is the true maximum. Configured via
+    # env so the campaign .env is authoritative (ADVISOR_REASONING_MODE=pro,
+    # ADVISOR_REASONING_EFFORT=max). Effort defaults to xhigh for back-compat
+    # with pre-5.6 models whose ladder tops there.
+    reasoning: dict = {"effort": os.environ.get("ADVISOR_REASONING_EFFORT", "xhigh")}
+    _mode = os.environ.get("ADVISOR_REASONING_MODE")
+    if _mode:
+        reasoning["mode"] = _mode
     kwargs: dict = {
         "model": mdl,
         "input": prompt,
-        "reasoning": {"effort": "xhigh"},  # xhigh = max per SDK ReasoningEffort literal
+        "reasoning": reasoning,
     }
     client = OpenAI(timeout=timeout, max_retries=4)
     RETRYABLE = (APIConnectionError, APITimeoutError, RateLimitError, InternalServerError)
@@ -428,6 +466,8 @@ def main() -> int:
 
     ap = argparse.ArgumentParser(description="advisor API caller (with hard spend safelock)")
     ap.add_argument("--advisor", choices=["openai", "gemini"], help="required for a call (omit for --show-spend / `spend`)")
+    ap.add_argument("--contestant", default=None,
+                    help="contestant id making this call (recorded in the spend ledger for attribution)")
     ap.add_argument("--prompt", default=None)
     ap.add_argument("--prompt-file", default=None, help="read prompt from file, or '-' for stdin")
     ap.add_argument("--model", default=None, help="override the default model")
@@ -439,6 +479,8 @@ def main() -> int:
     ap.add_argument("--poll", dest="poll", type=float, default=5.0, help="openai: background poll interval (s)")
     ap.add_argument("--id-file", dest="id_file", default=None,
                     help="openai: persist the background response id here so a restart resumes the same job")
+    ap.add_argument("--retrieve-only", action="store_true",
+                    help="openai: retrieve --id-file without creating/cancelling work or updating spend")
     # ---- spend safelock controls ----
     ap.add_argument("--show-spend", action="store_true", help="print the spend ledger and exit 0")
     ap.add_argument("--spend-cap-usd", dest="spend_cap_usd", type=float, default=None,
@@ -453,6 +495,19 @@ def main() -> int:
     if args.show_spend:
         _print_spend(cap)
         return 0
+    if args.retrieve_only:
+        if args.advisor != "openai" or not args.id_file:
+            print("error: --retrieve-only requires --advisor openai and --id-file", file=sys.stderr)
+            return 2
+        try:
+            status, text, usage = _retrieve_openai_response(args.id_file, args.timeout)
+        except Exception as exc:  # noqa: BLE001
+            print(f"advisor retrieve error: {type(exc).__name__}: {exc}", file=sys.stderr)
+            return 1
+        print(f"[advisor] retrieved status={status} usage={json.dumps(usage, sort_keys=True)}", file=sys.stderr)
+        if text:
+            print(text)
+        return 0 if status == "completed" else 4
     if not args.advisor:
         print("error: --advisor is required (or use `advisor.py spend` / --show-spend)", file=sys.stderr)
         return 2
@@ -490,7 +545,7 @@ def main() -> int:
         return 1
     finally:
         # ---- POST-CALL ACCOUNTING: always drop reservation; charge actual usage if known ----
-        _settle(rid, model, usage, cap)
+        _settle(rid, model, usage, cap, contestant=args.contestant)
 
     print(text)
     return 0
