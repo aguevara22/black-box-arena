@@ -30,10 +30,16 @@ run_demo.py          evidence-kit entry point
 report/              method report source for the original method
 ```
 
+Requirements: Python 3.11 or newer (every entry point refuses an older
+interpreter with one line saying so); elan, only for the kernel regime
+(see [SETUP.md](SETUP.md)). The working branch is `collaborative-proof`,
+the repository default; `main` (the Lean re-founding) and `master` (Black
+Box Arena v0.2) are frozen history.
+
 Quickstart, oracle regime (no Lean toolchain needed):
 
 ```sh
-python3 -m venv .venv
+python3.11 -m venv .venv                         # any Python >= 3.11
 .venv/bin/pip install -r arena/requirements.txt
 .venv/bin/python arena/smoke_oracle.py          # scripted two-contestant run on challenges/ising_lift
 .venv/bin/python arena/daemon.py --challenge ising_lift   # then use arena/client.py oracle ...
@@ -49,7 +55,7 @@ Quickstart, kernel regime (needs elan/Lean, see SETUP.md):
 Evidence-kit quickstart:
 
 ```sh
-python3 run_demo.py
+.venv/bin/python run_demo.py
 ```
 
 See [SETUP.md](SETUP.md) for real contestant sessions, [CONTESTANT.md](CONTESTANT.md)
@@ -72,8 +78,11 @@ pull request):**
 
 **Manual — you must run these yourself, CI does not:**
 
-1. the kernel-regime end-to-end smoke, because it needs elan and downloads a
-   Lean toolchain:
+1. the kernel-regime end-to-end smoke, because it needs elan and a Lean
+   toolchain. On a machine that lacks the toolchain pinned by
+   `challenges/smoke_min/lean-toolchain`, the smoke says so, fetches it once
+   with elan (minutes, no deadline) and only then starts the daemon's
+   120-second clock:
 
    ```sh
    .venv/bin/python arena/smoke_arena.py
@@ -85,11 +94,13 @@ pull request):**
 2. the evidence-kit demo after any change under `gauntlet/`:
 
    ```sh
-   python3 run_demo.py --instance example_ising --quick
+   .venv/bin/python run_demo.py --instance example_ising --quick
    ```
 
-   and commit the regenerated `example_ising/out/` (its paths are rendered
-   relative to the package; the portability test enforces that).
+   and commit the regenerated tables under `example_ising/out/` (their paths
+   are rendered relative to the package; the portability test enforces that).
+   The `report.json` and `report.jsonl` beside them are gitignored: they carry
+   wall-clock timings and change on every run.
 
 **Before every push, locally:**
 

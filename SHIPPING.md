@@ -26,13 +26,13 @@ problem, and what is deliberately out of scope.
 ## Run the demo (no API keys needed)
 
 ```sh
-python3 -m venv .venv && .venv/bin/pip install -r arena/requirements.txt
+python3.11 -m venv .venv && .venv/bin/pip install -r arena/requirements.txt   # any Python >= 3.11
 .venv/bin/python arena/smoke_oracle.py   # oracle regime: scripted two-contestant run, no Lean needed
 .venv/bin/python arena/daemon.py --challenge ising_lift          # shell 1 (oracle regime)
 .venv/bin/python arena/daemon.py --challenge smoke_min           # shell 1 (kernel regime; needs elan)
 python3 arena/client.py health                                    # shell 2
 .venv/bin/python arena/smoke_arena.py    # kernel regime: scripted run (needs elan)
-python3 run_demo.py                      # evidence-kit suite (stdlib only)
+.venv/bin/python run_demo.py             # evidence-kit suite (stdlib only, Python 3.11+)
 ```
 
 `smoke_oracle.py` drives two scripted contestants through the full oracle

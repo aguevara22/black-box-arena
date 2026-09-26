@@ -9,6 +9,11 @@ layout afterwards. No Lean toolchain needed. The kernel-regime counterpart is
 smoke_arena.py."""
 from __future__ import annotations
 
+try:  # interpreter floor first, before any module that needs it
+    from . import require_python  # noqa: F401
+except ImportError:  # direct script execution
+    import require_python  # noqa: F401
+
 import contextlib
 import json
 import os

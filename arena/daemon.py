@@ -13,6 +13,11 @@ touch the Lean workspace; they submit source as job payloads and poll.
 """
 from __future__ import annotations
 
+try:  # interpreter floor first, before any module that needs it
+    from . import require_python  # noqa: F401
+except ImportError:  # direct script execution
+    import require_python  # noqa: F401
+
 import argparse
 import asyncio
 import dataclasses

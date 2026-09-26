@@ -5,6 +5,8 @@ import sys
 
 sys.dont_write_bytecode = True
 
+from arena import require_python  # noqa: E402,F401  interpreter floor, before gauntlet imports
+
 import argparse
 import importlib
 from pathlib import Path

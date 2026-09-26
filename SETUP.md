@@ -1,13 +1,15 @@
 # Setup
 
-Run commands from the repo root. Python 3.11 or newer is recommended.
+Run commands from the repo root. Python 3.11 or newer is required (tested on
+3.11 and 3.12); every entry point refuses an older interpreter with one line
+saying so.
 
 ## Prerequisites
 
 - **Python** environment for the daemon:
 
   ```sh
-  python3 -m venv .venv
+  python3.11 -m venv .venv                         # any Python >= 3.11
   .venv/bin/pip install -r arena/requirements.txt
   ```
 
@@ -18,8 +20,15 @@ Run commands from the repo root. Python 3.11 or newer is recommended.
   curl -sSf https://elan.lean-lang.org/elan-init.sh | sh -s -- -y --no-modify-path --default-toolchain none
   ```
 
-  Each challenge pins its own toolchain in `challenges/<name>/lean-toolchain`;
-  elan fetches it on first use.
+  Each challenge pins its own toolchain in `challenges/<name>/lean-toolchain`.
+  The daemon (at boot) and the kernel smoke (before it starts the daemon)
+  check that the pinned toolchain is installed and otherwise fetch it once,
+  explicitly and with no deadline — minutes on a fresh machine. To pre-fetch
+  by hand:
+
+  ```sh
+  ~/.elan/bin/elan toolchain install "$(cat challenges/smoke_min/lean-toolchain)"
+  ```
 
 - The advisor is optional; its SDK imports are lazy:
 
@@ -70,9 +79,9 @@ every open file. Skip the Lean files entirely.
 
 ## Arena quickstart (kernel regime)
 
-Start the smoke challenge daemon (first boot materializes the workspace and
-builds the frozen libraries — seconds for mathlib-free challenges, minutes
-for mathlib ones):
+Start the smoke challenge daemon (first boot fetches the pinned toolchain if
+it is missing, materializes the workspace and builds the frozen libraries —
+seconds for mathlib-free challenges, minutes for mathlib ones):
 
 ```sh
 .venv/bin/python arena/daemon.py --challenge smoke_min
@@ -150,13 +159,14 @@ the only admissible evidence, and contestants never touch the workspace.
 
 ## Evidence-kit demo
 
-Layer B remains standard-library-only:
+Layer B needs no third-party package, only the Python 3.11+ interpreter:
 
 ```sh
-python3 run_demo.py
-python3 run_demo.py --quick
-python3 run_demo.py --instance NAME
+.venv/bin/python run_demo.py
+.venv/bin/python run_demo.py --quick
+.venv/bin/python run_demo.py --instance NAME
 ```
 
 Generated reports and verification tables appear under the selected
-instance's `out/` directory.
+instance's `out/` directory; the tables are tracked, the `report.json` and
+`report.jsonl` are gitignored (wall-clock timings).

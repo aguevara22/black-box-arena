@@ -21,6 +21,7 @@ import os
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Callable
 
 try:
     from .config import KernelConfig
@@ -47,6 +48,51 @@ CANDIDATES_DIR = "Candidates"
 
 class WorkspaceError(RuntimeError):
     pass
+
+
+ELAN_INSTALL_HINT = (
+    "curl -sSf https://elan.lean-lang.org/elan-init.sh | sh -s -- -y "
+    "--no-modify-path --default-toolchain none"
+)
+
+
+def ensure_toolchain(source_dir: Path, log_line: Callable[[str], None] | None = None) -> str:
+    """Make sure the toolchain pinned in ``<source_dir>/lean-toolchain`` is installed.
+
+    elan's ``lean`` shim would otherwise download it silently on first use,
+    which on a fresh machine takes minutes and trips every startup deadline
+    (the daemon's ``lean --version`` probe, the smoke's health wait). Here the
+    fetch is explicit, announced, and runs with no deadline. Returns the
+    toolchain name; raises WorkspaceError with the install one-liner when elan
+    itself is missing.
+    """
+    say = log_line or (lambda msg: log.info("%s", msg))
+    name = (source_dir / "lean-toolchain").read_text(encoding="utf-8").strip()
+    env = _elan_env()
+    elan = shutil.which("elan", path=env["PATH"])
+    if elan is None:
+        raise WorkspaceError(
+            "elan (the Lean toolchain manager) is not installed or not on PATH; "
+            f"install it with:  {ELAN_INSTALL_HINT}   (see SETUP.md)"
+        )
+    listed = subprocess.run(
+        [elan, "toolchain", "list"], env=env, capture_output=True, text=True, timeout=60
+    )
+    installed = {line.split()[0] for line in listed.stdout.splitlines() if line.strip()}
+    if name in installed:
+        return name
+    say(f"toolchain {name} is not installed; fetching it once with elan (minutes, no deadline)")
+    proc = subprocess.run(
+        [elan, "toolchain", "install", name],
+        env=env, capture_output=True, text=True, timeout=3600,
+    )
+    if proc.returncode != 0:
+        raise WorkspaceError(
+            f"elan toolchain install {name} failed (exit {proc.returncode}): "
+            f"{proc.stderr[-2000:]}"
+        )
+    say(f"toolchain {name} installed")
+    return name
 
 
 def _elan_env() -> dict[str, str]:
@@ -91,6 +137,7 @@ class LeanWorkspace:
                 raise WorkspaceError(f"challenge {self.challenge} is missing frozen file {required}")
 
         self.frozen_hashes = self._hash_frozen()
+        ensure_toolchain(self.root)  # explicit one-time fetch, before any deadline-bound probe
         self.lean_version = self._run(["lean", "--version"], timeout=120).strip()
         self.fingerprint = toolchain_fingerprint(self.lean_version, self.frozen_hashes)
 

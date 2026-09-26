@@ -2,6 +2,11 @@
 """Deterministic end-to-end smoke test for the Lean-kernel arena."""
 from __future__ import annotations
 
+try:  # interpreter floor first, before any module that needs it
+    from . import require_python  # noqa: F401
+except ImportError:  # direct script execution
+    import require_python  # noqa: F401
+
 import contextlib
 import json
 import os
@@ -14,6 +19,11 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Callable, Iterator
+
+try:
+    from .lean_workspace import ensure_toolchain
+except ImportError:  # direct script execution
+    from lean_workspace import ensure_toolchain
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -273,6 +283,12 @@ def run_smoke() -> int:
             ' "lakeDir": ".lake",\n'
             ' "fixedToolchain": false}\n',
             encoding="utf-8",
+        )
+        # First-run trap: elan's `lean` shim would download the pinned toolchain
+        # silently and blow the 120 s health deadline below. Fetch it explicitly.
+        ensure_toolchain(
+            ROOT / "challenges" / "smoke_min",
+            log_line=lambda msg: print(f"ARENA-SMOKE: {msg}", flush=True),
         )
         env = os.environ.copy()
         env["ORACLE_STATE_ROOT"] = str(state_root)
