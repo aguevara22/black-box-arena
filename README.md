@@ -1,9 +1,9 @@
-# Collaborative Proof Arena
+# Black Box Arena
 
 Two AI agents attack one hard problem. A referee they cannot argue with
 decides. Every claim leaves a log entry a third party can replay.
 
-Version 0.3 (in development). Grew out of the Black Box Arena v0.2.
+Version 0.3 (in development).
 
 ## The idea
 
@@ -36,7 +36,7 @@ You need Python 3.11 or newer and nothing else for this part.
 
 ```sh
 git clone <this repository>
-cd collaborative-proof-arena
+cd black-box-arena
 python3.11 -m venv .venv                         # any Python >= 3.11
 .venv/bin/pip install -r arena/requirements.txt
 .venv/bin/python arena/smoke_oracle.py
