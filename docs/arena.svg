@@ -1,70 +1,74 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="960" height="470" viewBox="0 0 960 470" font-family="Helvetica, Arial, sans-serif" font-size="15">
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="560" viewBox="0 0 1100 560" font-family="Helvetica, Arial, sans-serif" font-size="15" fill="#222">
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="#333"/>
     </marker>
   </defs>
-  <rect width="960" height="470" fill="#ffffff"/>
-
-  <!-- the black box -->
-  <rect x="40" y="150" width="190" height="130" rx="8" fill="#1a1a1a"/>
-  <text x="135" y="200" text-anchor="middle" fill="#ffffff" font-size="17" font-weight="bold">Your black box</text>
-  <text x="135" y="226" text-anchor="middle" fill="#dddddd">input in, answer out</text>
-  <text x="135" y="248" text-anchor="middle" fill="#dddddd">nobody knows the rule</text>
-
-  <!-- the gatekeeper -->
-  <rect x="330" y="90" width="260" height="290" rx="8" fill="#f2f2f2" stroke="#333" stroke-width="1.5"/>
-  <text x="460" y="120" text-anchor="middle" font-size="17" font-weight="bold">The gatekeeper</text>
-  <text x="460" y="142" text-anchor="middle" fill="#555">(a small program, always running)</text>
-  <text x="350" y="178">• the only one allowed to ask the box</text>
-  <text x="350" y="202">• writes down every question</text>
-  <text x="350" y="226">   and every answer, in order</text>
-  <text x="350" y="250">• the record only grows;</text>
-  <text x="350" y="274">   nothing is ever erased</text>
-  <text x="350" y="298">• refuses a solution that shows</text>
-  <text x="350" y="322">   too little evidence</text>
-  <text x="350" y="356" font-weight="bold">• writes SOLVED when both agents agree</text>
-
-  <!-- box <-> gatekeeper -->
-  <line x1="330" y1="200" x2="232" y2="200" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="281" y="192" text-anchor="middle" fill="#333" font-size="13">question</text>
-  <line x1="232" y1="236" x2="330" y2="236" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="281" y="256" text-anchor="middle" fill="#333" font-size="13">answer</text>
-
-  <!-- agents -->
-  <rect x="700" y="70" width="220" height="110" rx="8" fill="#e8f0fe" stroke="#333" stroke-width="1.5"/>
-  <text x="810" y="100" text-anchor="middle" font-size="17" font-weight="bold">Agent A</text>
-  <text x="810" y="124" text-anchor="middle" fill="#333">guesses, asks, posts findings,</text>
-  <text x="810" y="146" text-anchor="middle" fill="#333">proposes a full answer</text>
-
-  <rect x="700" y="290" width="220" height="110" rx="8" fill="#fdecec" stroke="#333" stroke-width="1.5"/>
-  <text x="810" y="320" text-anchor="middle" font-size="17" font-weight="bold">Agent B</text>
-  <text x="810" y="344" text-anchor="middle" fill="#333">works the same problem,</text>
-  <text x="810" y="366" text-anchor="middle" fill="#333">checks A's answer, accepts or objects</text>
-
-  <!-- shared notes between agents -->
-  <line x1="810" y1="182" x2="810" y2="288" stroke="#333" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
-  <rect x="740" y="221" width="140" height="28" rx="6" fill="#ffffff" stroke="#333"/>
-  <text x="810" y="240" text-anchor="middle" font-size="13">shared notes</text>
-
-  <!-- agents <-> gatekeeper -->
-  <line x1="698" y1="120" x2="592" y2="160" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="640" y="128" text-anchor="middle" fill="#333" font-size="13">my guess, then my question</text>
-  <line x1="592" y1="190" x2="698" y2="150" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="652" y="186" text-anchor="middle" fill="#333" font-size="13">answer + receipt</text>
-
-  <line x1="698" y1="350" x2="592" y2="310" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="640" y="345" text-anchor="middle" fill="#333" font-size="13">questions; then: I agree</text>
-  <line x1="592" y1="280" x2="698" y2="320" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
-  <text x="652" y="288" text-anchor="middle" fill="#333" font-size="13">answer + receipt</text>
-
-  <!-- the record -->
-  <rect x="330" y="410" width="260" height="44" rx="8" fill="#fff8dc" stroke="#333" stroke-width="1.5"/>
-  <text x="460" y="429" text-anchor="middle" font-weight="bold" font-size="14">The record</text>
-  <text x="460" y="446" text-anchor="middle" font-size="12" fill="#333">every question, answer, claim and check, in order — readable afterwards by anyone</text>
-  <line x1="460" y1="380" x2="460" y2="408" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect width="1100" height="560" fill="#ffffff"/>
 
   <!-- you -->
-  <text x="135" y="60" font-size="15" fill="#333">You: start the gatekeeper on your box,</text>
-  <text x="135" y="80" font-size="15" fill="#333">open two agent sessions, look in now and then.</text>
+  <text x="40" y="48" font-size="15" fill="#444">You: start the gatekeeper on your box, open two agent sessions, look in now and then.</text>
+
+  <!-- the black box -->
+  <rect x="40" y="200" width="200" height="130" rx="8" fill="#1a1a1a"/>
+  <text x="140" y="250" text-anchor="middle" fill="#ffffff" font-size="17" font-weight="bold">Your black box</text>
+  <text x="140" y="276" text-anchor="middle" fill="#dddddd">input in, answer out</text>
+  <text x="140" y="298" text-anchor="middle" fill="#dddddd">nobody knows the rule</text>
+
+  <!-- box <-> gatekeeper -->
+  <line x1="330" y1="245" x2="242" y2="245" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="286" y="236" text-anchor="middle" font-size="13" fill="#444">question</text>
+  <line x1="242" y1="290" x2="330" y2="290" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="286" y="310" text-anchor="middle" font-size="13" fill="#444">answer</text>
+
+  <!-- the gatekeeper -->
+  <rect x="330" y="100" width="290" height="330" rx="8" fill="#f2f2f2" stroke="#333" stroke-width="1.5"/>
+  <text x="475" y="132" text-anchor="middle" font-size="17" font-weight="bold">The gatekeeper</text>
+  <text x="475" y="154" text-anchor="middle" fill="#666" font-size="14">a small program, always running</text>
+  <g font-size="14">
+    <text x="350" y="192">• only it may ask the box</text>
+    <text x="350" y="222">• writes down every question and</text>
+    <text x="364" y="242">every answer, in order</text>
+    <text x="350" y="272">• the record only grows;</text>
+    <text x="364" y="292">nothing is ever erased</text>
+    <text x="350" y="322">• refuses a proposed solution</text>
+    <text x="364" y="342">that shows too little evidence</text>
+    <text x="350" y="380" font-weight="bold">• writes SOLVED when</text>
+    <text x="364" y="400" font-weight="bold">both agents agree</text>
+  </g>
+
+  <!-- the record -->
+  <line x1="475" y1="430" x2="475" y2="462" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <rect x="330" y="464" width="290" height="70" rx="8" fill="#fff8dc" stroke="#333" stroke-width="1.5"/>
+  <text x="475" y="488" text-anchor="middle" font-weight="bold" font-size="14">The record</text>
+  <text x="475" y="507" text-anchor="middle" font-size="13" fill="#444">every question, answer, claim and check, in order;</text>
+  <text x="475" y="524" text-anchor="middle" font-size="13" fill="#444">readable afterwards by anyone</text>
+
+  <!-- agents -->
+  <rect x="790" y="100" width="270" height="110" rx="8" fill="#e8f0fe" stroke="#333" stroke-width="1.5"/>
+  <text x="925" y="130" text-anchor="middle" font-size="17" font-weight="bold">Agent A</text>
+  <text x="925" y="156" text-anchor="middle" font-size="14">guesses, asks, posts findings,</text>
+  <text x="925" y="178" text-anchor="middle" font-size="14">proposes a full answer</text>
+
+  <rect x="790" y="320" width="270" height="110" rx="8" fill="#fdecec" stroke="#333" stroke-width="1.5"/>
+  <text x="925" y="350" text-anchor="middle" font-size="17" font-weight="bold">Agent B</text>
+  <text x="925" y="376" text-anchor="middle" font-size="14">works the same problem,</text>
+  <text x="925" y="398" text-anchor="middle" font-size="14">checks A's answer, accepts or objects</text>
+
+  <!-- shared notes -->
+  <line x1="925" y1="212" x2="925" y2="318" stroke="#333" stroke-width="1.5" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+  <rect x="870" y="251" width="110" height="28" rx="6" fill="#ffffff" stroke="#333"/>
+  <text x="925" y="270" text-anchor="middle" font-size="13">shared notes</text>
+
+  <!-- agent A <-> gatekeeper -->
+  <line x1="788" y1="135" x2="622" y2="135" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="705" y="126" text-anchor="middle" font-size="13" fill="#444">my guess, then my question</text>
+  <line x1="622" y1="175" x2="788" y2="175" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="705" y="195" text-anchor="middle" font-size="13" fill="#444">answer, with a receipt</text>
+
+  <!-- agent B <-> gatekeeper -->
+  <line x1="788" y1="355" x2="622" y2="355" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="705" y="346" text-anchor="middle" font-size="13" fill="#444">questions; at the end: I agree</text>
+  <line x1="622" y1="395" x2="788" y2="395" stroke="#333" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="705" y="415" text-anchor="middle" font-size="13" fill="#444">answer, with a receipt</text>
 </svg>
