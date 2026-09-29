@@ -1,11 +1,8 @@
 # Black Box Arena
 
-Two AI agents attack one hard problem. A referee they cannot argue with
-decides. Every claim leaves a log entry a third party can replay.
-
 Version 0.3 (in development).
 
-## The idea
+## Introduction
 
 Autonomous agents are good at producing claims and bad at knowing which
 ones are true. This arena separates the two jobs. Two contestant agents,
