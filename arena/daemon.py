@@ -95,8 +95,8 @@ EVIDENCE_ROW_RE = re.compile(
     r"^EVIDENCE:\s*"
     r"input=(?P<input>.+?)\s*\|\s*"
     r"tags=(?P<tags>[^|]*?)\s*\|\s*"
-    r"oracle=(?P<oracle>wall|[+-]?\d+)\s*\|\s*"
-    r"proposed=(?P<proposed>wall|[+-]?\d+)\s*\|\s*"
+    r"oracle=(?P<oracle>[^|]*?)\s*\|\s*"
+    r"proposed=(?P<proposed>[^|]*?)\s*\|\s*"
     r"match=(?P<match>yes|no)\s*$",
     flags=re.IGNORECASE,
 )
@@ -107,7 +107,8 @@ def _parse_evidence_line(line: str) -> dict[str, Any]:
     if match is None:
         raise ValueError(
             "expected EVIDENCE: input=<json> | tags=<comma-list> | "
-            "oracle=<int or wall> | proposed=<int or wall> | match=yes|no"
+            "oracle=<answer as json, or wall> | proposed=<answer as json, or wall> | "
+            "match=yes|no"
         )
     try:
         input_payload = json.loads(match.group("input"))
@@ -117,16 +118,28 @@ def _parse_evidence_line(line: str) -> dict[str, Any]:
     if not tags or any(not tag for tag in tags):
         raise ValueError("tags must be a nonempty comma-list")
 
-    def value(raw: str) -> int | str:
-        return "wall" if raw.lower() == "wall" else int(raw)
+    def value(field: str) -> Any:
+        # The answer is whatever shape the challenge's output_schema declares
+        # (an integer, an object, a list ...) written as JSON, or the word
+        # `wall`. The gate never assumes a scalar.
+        raw = match.group(field).strip()
+        if raw.lower() == "wall":
+            return "wall"
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{field} must be the answer as JSON, or wall: {exc.msg}") from exc
 
-    return {
+    row = {
         "input": input_payload,
         "tags": tags,
-        "oracle": value(match.group("oracle")),
-        "proposed": value(match.group("proposed")),
+        "oracle": value("oracle"),
+        "proposed": value("proposed"),
         "match": match.group("match").lower(),
     }
+    if row["match"] == "yes" and row["oracle"] != row["proposed"]:
+        raise ValueError("match=yes but oracle and proposed differ")
+    return row
 
 
 def _finish_gate_errors(text: str, gate: FinishGateConfig | None) -> list[str]:

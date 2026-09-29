@@ -154,7 +154,12 @@ it exhibits — or the daemon rejects it before any peer sees it:
 
 ```text
 EVIDENCE: input={"n":2,"edges":[],"fields":[1,2]} | tags=n2,fields | oracle=0 | proposed=0 | match=yes
+EVIDENCE: input={"n":7} | tags=small | oracle={"value":49} | proposed={"value":49} | match=yes
 ```
+
+`oracle=` and `proposed=` carry the answer in whatever shape the challenge's
+`output_schema` declares, written as JSON (an integer, an object, a list), or
+the word `wall`. A `match=yes` row whose two answers differ is rejected.
 
 Peer verification is unchanged: only the other contestant may agree, the
 daemon re-checks the gate on the stored proposal, and SOLVED is written by

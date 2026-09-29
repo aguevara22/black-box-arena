@@ -106,7 +106,22 @@ client CLI, no advisor/agent/external API):
 ## Real contestant sessions
 
 The daemon is passive; the operator starts each agent session by hand. Both
-follow `CONTESTANT.md`.
+follow `CONTESTANT.md`. There is no runner yet: a seat that stops (rate
+limit, context reset, crash) stays stopped until you restart it, so check
+each contestant's last turn in `client.py snapshot` now and then.
+
+To seat an agent, open a coding-agent session (Claude Code, Codex, any
+agent that can run shell commands) in the repo root and paste, with the id
+and URL of that seat:
+
+```text
+Read CONTESTANT.md and follow it exactly. You are contestant `claude`
+(export CONTESTANT_ID=claude) against the daemon at
+ORACLE_DAEMON_URL=http://127.0.0.1:8787. Do one tick, post your turn, then
+start the next tick; keep going until SOLVED appears in the snapshot or I
+stop you. Use only arena/client.py; never edit state files or the Lean
+workspace; do not read challenges/<name>/oracle.py.
+```
 
 | Contestant id | Agent runner | Cross-vendor advisor | Optional key |
 |---|---|---|---|
@@ -156,6 +171,26 @@ commit a `lake-manifest.json` pin, and add `Mathlib` to
 Nothing is secret: contestants may read every frozen file. The discipline is
 that the daemon's kernel verdict — recorded in the append-only job log — is
 the only admissible evidence, and contestants never touch the workspace.
+
+### Add a numeric challenge (sealed oracle)
+
+No Lean layer. Copy the template, then in `config.yaml` set
+`ground_truth: oracle`, `kernel.enabled: false`, and add the `oracle:` block
+(a one-sentence `description`, a JSON Schema for query payloads, one for
+answers, a per-query `timeout_seconds`) and the `finish_gate:` block (how
+many `match=yes` evidence rows a finish needs and which coverage tags they
+must exhibit). Write `oracle.py :: query(payload) -> answer` — the answer
+may have any JSON shape your output schema declares — and `problem.md`.
+Only the daemon's worker subprocess imports `oracle.py`; the daemon
+validates every payload against the schema before the worker sees it. Then:
+
+```sh
+.venv/bin/python arena/daemon.py --challenge my_case
+python3 arena/client.py oracle --contestant-id claude --input '{"n":7}' \
+  --predict '{"value":49}' --hypothesis "f(n) = n^2"
+```
+
+`challenges/ising_lift` is a complete worked example of the blocks.
 
 ## Evidence-kit demo
 

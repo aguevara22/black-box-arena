@@ -53,5 +53,29 @@ def test_finish_gate_rejects_missing_and_malformed_rows() -> None:
     assert any("fields" in error for error in errors)
 
 
+def test_evidence_rows_take_any_json_answer() -> None:
+    row = _parse_evidence_line(
+        'EVIDENCE: input={"n":7} | tags=small | oracle={"value":49} | proposed={"value":49} | match=yes'
+    )
+    assert row["oracle"] == {"value": 49} and row["proposed"] == {"value": 49}
+    row = _parse_evidence_line(
+        'EVIDENCE: input={"n":7} | tags=small | oracle="prime" | proposed=[1,2] | match=no'
+    )
+    assert row["oracle"] == "prime" and row["proposed"] == [1, 2]
+
+
+def test_evidence_rows_reject_garbage_and_self_contradiction() -> None:
+    gate = FinishGateConfig(min_rows=1, required_tags=[])
+    errors = _finish_gate_errors(
+        'EVIDENCE: input={"n":7} | tags=small | oracle=forty-nine | proposed=49 | match=yes', gate
+    )
+    assert any("answer as JSON" in error for error in errors)
+    errors = _finish_gate_errors(
+        'EVIDENCE: input={"n":7} | tags=small | oracle=49 | proposed=50 | match=yes', gate
+    )
+    assert any("oracle and proposed differ" in error for error in errors)
+    assert any("at least 1" in error for error in errors)
+
+
 def test_absent_finish_gate_preserves_peer_flow() -> None:
     assert _finish_gate_errors("plain complete solution", None) == []
