@@ -60,6 +60,8 @@ Evidence-kit quickstart:
 
 See [SETUP.md](SETUP.md) for real contestant sessions, [CONTESTANT.md](CONTESTANT.md)
 for the protocol, and [METHOD.md](METHOD.md) for the underlying method.
+An AI agent working in this repository starts at [AGENTS.md](AGENTS.md)
+(Claude Code is pointed there by `CLAUDE.md`).
 
 ## Verify before you push
 
