@@ -1,11 +1,14 @@
 # The Method — Arena → Funnel → Evidence → Ship
 
-Version 0.2 (2026-07-24). Problem-agnostic specification of a working method
-for hard identification-and-construction problems, in two coupled layers:
+Version 0.3 (in development; 0.2 was 2026-07-24). Problem-agnostic
+specification of a working method for hard proof and
+identification-and-construction problems, in two coupled layers:
 
 - **Layer A — the arena** (`arena/`, `challenges/`): autonomous multi-agent
-  research under adversarial peer verification against a sealed oracle. This
-  is the discovery engine.
+  research under adversarial peer verification against a ground truth the
+  agents cannot argue with — the Lean 4 kernel for theorems
+  (`ground_truth: kernel`), a sealed numeric oracle for identification
+  problems (`ground_truth: oracle`). This is the discovery engine.
 - **Layer B — the evidence kit** (`gauntlet/`, `example_ising/`,
   `instance_template/`): the claim-coupled verification discipline an agent
   (or a human) uses to make results finish-grade, and to consolidate a
@@ -52,9 +55,10 @@ A well-posed instance supplies five elements, authored as a challenge package
 ### 2.1 Sovereignty: the daemon
 
 One daemon process is the **sole writer of all shared state** and the **only
-gateway to the oracle**. Contestants interact exclusively through a
-stdlib-only client. State writes are serialized; nothing an agent does can
-corrupt the record or read the answer key.
+gateway to the ground truth** — the kernel or the sealed oracle. Contestants
+interact exclusively through a stdlib-only client. State writes are
+serialized; nothing an agent does can corrupt the record, touch the Lean
+workspace, or read the answer key.
 
 ### 2.2 Contestants: independent, stateless, stigmergic
 
@@ -165,10 +169,12 @@ laddered, machine-checked claims.
 
 ## 5. Operating procedure
 
-- **P0 — Author.** Copy `challenges/_template/`; write `problem.md` (task,
-  calibration with leak, finish criteria), `config.yaml` (oracle mode and
-  schemas, contestants, promotion policy, finish-gate coverage), `oracle.py`
-  (sealed). Version control; state and scratch out of tree.
+- **P0 — Author.** Copy a challenge package (`challenges/smoke_min/` for a
+  theorem, `challenges/_template/` for a numeric oracle); write `problem.md`
+  (task, calibration, finish criteria) and `config.yaml` (ground truth,
+  contestants, promotion policy); then either the frozen Lean layer (`Defs/`,
+  `Goal.lean`, `Calibration/`) or the sealed `oracle.py` with its schemas and
+  finish gate. Version control; state and scratch out of tree.
 - **P1 — Boot.** Start the daemon; verify health; contestants read
   `problem.md` through the client only.
 - **P2 — Contest.** Contestants run ticks; advisors on hard derivations;
@@ -215,4 +221,6 @@ laddered, machine-checked claims.
 | Challenge modularity | `challenges/_template/`, `challenges/ising_lift/` (oracle), `challenges/smoke_min/` (kernel) |
 | Evidence kit (routes, gates, ladder, provenance, lint, tables) | `gauntlet/`, `example_ising/`, `instance_template/` |
 
-Adoption checklist: `SHIPPING.md`. Full prose report: `report/`.
+Recipes: `SETUP.md` (for people) and `AGENTS.md` (for agents). Rules every
+change keeps: `CONTRIBUTING.md`. A paper describing the method is in
+preparation and supersedes the 0.2 method report that used to live here.

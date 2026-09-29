@@ -171,4 +171,4 @@ python3 arena/client.py oracle --contestant-id claude --input '<json>' --predict
 | `challenges/<name>/` | one exchangeable problem package; `_template`, `smoke_min`, `ising_lift` are the models |
 | `state/<name>/` | append-only logs, proposals, `SOLVED` |
 | `CONTESTANT.md` | the contestant protocol (tick, DAG, finish, oracle regime) |
-| `SETUP.md`, `README.md`, `SHIPPING.md`, `METHOD.md` | human documentation |
+| `README.md`, `SETUP.md`, `METHOD.md`, `CONTRIBUTING.md` | human documentation: front page, recipes, design, rules for changes |

@@ -1,115 +1,149 @@
 # Collaborative Proof Arena
 
-Autonomous multi-agent research under adversarial peer verification, with
-**one daemon and two ground truths**, chosen per challenge by
-`ground_truth:` in `config.yaml`:
+Two AI agents attack one hard problem. A referee they cannot argue with
+decides. Every claim leaves a log entry a third party can replay.
 
-- **`kernel`** — collaborative theorem proving with the Lean 4 kernel: a
-  kernel-checked proof DAG, a mechanical hygiene audit (`#print axioms`,
-  defeq fidelity against a frozen goal), peer verification of statement
-  fidelity.
-- **`oracle`** — identification and construction against a **sealed numeric
-  oracle**: the challenge ships `oracle.py :: query(payload)`, which only the
-  daemon's worker subprocess ever imports; contestants get answers, each
-  correlated by request id and input hash; predict-before-query promotes
-  hypotheses; a mechanical evidence-matrix gate filters thin finishes.
+Version 0.3 (in development). Grew out of the Black Box Arena v0.2.
 
-The discipline is the same in both: the daemon is the sole writer of state
-and the only gateway to the ground truth, and its append-only log is the
-only admissible evidence. Nothing certifies itself.
+## The idea
 
-```text
-arena/               daemon, kernel runner, proof DAG, client, ops, tests
-challenges/          exchangeable challenge packages (frozen Defs + Goal)
-CONTESTANT.md        contestant tick, DAG, and finish protocol
-SETUP.md             installation and operating guide
-gauntlet/            fixed evidence-kit machinery (Layer B)
-example_ising/       worked evidence-kit instance (legacy, numeric)
-instance_template/   exchangeable evidence-kit package
-run_demo.py          evidence-kit entry point
-report/              method report source for the original method
-```
+Autonomous agents are good at producing claims and bad at knowing which
+ones are true. This arena separates the two jobs. Two contestant agents,
+ideally from different vendors, work the same problem in their own sessions.
+A daemon sits between them and the ground truth. For a theorem, the ground
+truth is the Lean 4 kernel checking proofs against a frozen goal. For a
+numeric problem, it is a sealed black box that only the daemon may call. A
+contestant's claim counts only if it cites an entry in the daemon's
+append-only log, and a finish counts only after the other contestant has
+verified it. Nothing certifies itself: not the agents, not their advisors,
+not the operator.
 
-Requirements: Python 3.11 or newer (every entry point refuses an older
-interpreter with one line saying so); elan, only for the kernel regime
-(see [SETUP.md](SETUP.md)). The working branch is `collaborative-proof`,
-the repository default; `main` (the Lean re-founding) and `master` (Black
-Box Arena v0.2) are frozen history.
+What you get at the end is not a transcript but a record: what was asked,
+what the kernel or the black box answered, who proposed what, who checked
+it, and in what order.
 
-Quickstart, oracle regime (no Lean toolchain needed):
+## Who it is for
+
+- Researchers who want agents on a real open problem with an audit trail.
+- Anyone with a Lean 4 goal to prove, or a computable function to identify
+  or reconstruct from queries.
+- People studying how autonomous agents behave under adversarial
+  verification.
+
+## Five-minute demo
+
+You need Python 3.11 or newer and nothing else for this part.
 
 ```sh
+git clone <this repository>
+cd collaborative-proof-arena
 python3.11 -m venv .venv                         # any Python >= 3.11
 .venv/bin/pip install -r arena/requirements.txt
-.venv/bin/python arena/smoke_oracle.py          # scripted two-contestant run on challenges/ising_lift
-.venv/bin/python arena/daemon.py --challenge ising_lift   # then use arena/client.py oracle ...
-```
-
-Quickstart, kernel regime (needs elan/Lean, see SETUP.md):
-
-```sh
-.venv/bin/python arena/smoke_arena.py           # scripted run on challenges/smoke_min
-.venv/bin/python arena/daemon.py --challenge smoke_min
-```
-
-Evidence-kit quickstart:
-
-```sh
-.venv/bin/python run_demo.py
-```
-
-See [SETUP.md](SETUP.md) for real contestant sessions, [CONTESTANT.md](CONTESTANT.md)
-for the protocol, and [METHOD.md](METHOD.md) for the underlying method.
-An AI agent working in this repository starts at [AGENTS.md](AGENTS.md)
-(Claude Code is pointed there by `CLAUDE.md`).
-
-## Verify before you push
-
-The repo is meant to be cloned and run by other people, so every change is
-checked the same way on every machine. Some of it is automatic, some is not;
-this section says exactly which.
-
-**Automatic (GitHub Actions, `.github/workflows/tests.yml`, on every push and
-pull request):**
-
-1. the unit suite `arena/tests` on Python 3.11 and 3.12 — including
-   `test_portability.py`, which fails on any tracked text file carrying a home
-   directory path (a macOS or Linux user-home prefix) or a tracked build, venv
-   or state tree;
-2. the oracle-regime end-to-end smoke `arena/smoke_oracle.py`.
-
-**Manual — you must run these yourself, CI does not:**
-
-1. the kernel-regime end-to-end smoke, because it needs elan and a Lean
-   toolchain. On a machine that lacks the toolchain pinned by
-   `challenges/smoke_min/lean-toolchain`, the smoke says so, fetches it once
-   with elan (minutes, no deadline) and only then starts the daemon's
-   120-second clock:
-
-   ```sh
-   .venv/bin/python arena/smoke_arena.py
-   ```
-
-   Run it before any release and after any change under `arena/daemon.py`,
-   `arena/kernel_runner.py`, `arena/lean_workspace.py`, `arena/hygiene.py`,
-   `arena/assembly.py` or `arena/dag.py`.
-2. the evidence-kit demo after any change under `gauntlet/`:
-
-   ```sh
-   .venv/bin/python run_demo.py --instance example_ising --quick
-   ```
-
-   and commit the regenerated tables under `example_ising/out/` (their paths
-   are rendered relative to the package; the portability test enforces that).
-   The `report.json` and `report.jsonl` beside them are gitignored: they carry
-   wall-clock timings and change on every run.
-
-**Before every push, locally:**
-
-```sh
-.venv/bin/python -m pytest arena/tests -q
 .venv/bin/python arena/smoke_oracle.py
 ```
 
-Both must pass. A venv is per machine: create it from `arena/requirements.txt`,
-never copy one from another account or computer.
+The last command boots the daemon on the built-in numeric challenge and
+drives two scripted contestants through a whole contest: sealed queries with
+predictions registered beforehand, findings, a breakthrough promoted by
+cross-confirmation, a finish stopped by the evidence gate, a finish that
+passes, peer verification, `SOLVED`. It prints each step and ends with
+`ORACLE-SMOKE: ALL OK`.
+
+To touch the same daemon by hand:
+
+```sh
+.venv/bin/python arena/daemon.py --challenge ising_lift          # shell 1
+python3 arena/client.py health                                    # shell 2
+python3 arena/client.py problem
+python3 arena/client.py oracle --contestant-id claude \
+  --input '{"n":2,"edges":[],"fields":[1,2]}' \
+  --predict '{"status":"ok","coefficient":0}' --hypothesis "fields alone give 0"
+```
+
+The theorem side needs the Lean toolchain manager elan, which
+[SETUP.md](SETUP.md) walks through; its demo is
+`.venv/bin/python arena/smoke_arena.py`. The first run fetches a Lean
+toolchain and says so.
+
+## Bring your own problem
+
+A problem is a folder under `challenges/`. Two kinds:
+
+- **A theorem.** Frozen definitions, a goal stated as a Lean `Prop`, and
+  calibration examples that must compile before the daemon serves. Copy
+  `challenges/smoke_min` and edit.
+- **A numeric black box.** A `query(payload)` function only the daemon's
+  worker may import, JSON Schemas for its inputs and outputs, and an
+  evidence gate saying how many verified rows a finish needs and which
+  cases they must cover. Copy `challenges/_template` and edit.
+
+Step-by-step recipes with an acceptance check for each are in
+[SETUP.md](SETUP.md) ("Add a challenge"); the same recipes in command form,
+written for an AI agent doing the work, are in [AGENTS.md](AGENTS.md).
+
+## Running a contest
+
+- **The daemon** serves one challenge, owns the shared state under `state/`,
+  and is the only process that talks to the kernel or the black box.
+- **Two contestants** are agent sessions (Claude Code, Codex, any agent that
+  runs shell commands) that you open and point at the daemon with a
+  paste-in text from [SETUP.md](SETUP.md). Their only tool is
+  `arena/client.py`. The protocol they follow is
+  [CONTESTANT.md](CONTESTANT.md).
+- **Advisors** are optional cross-vendor models a contestant may consult;
+  keys go in `.env`, spend is capped and refused fail-closed. Advice is
+  never evidence.
+- **You** watch with `python3 arena/client.py snapshot`, and restart a
+  contestant that stops. The daemon writes `state/<name>/SOLVED` when a
+  finish is peer-verified. The state directory is the record; keep it.
+
+After `SOLVED`, the evidence kit under `gauntlet/` turns the accepted result
+into checked, laddered claims with generated verification tables
+(`run_demo.py` shows it on a worked instance). [METHOD.md](METHOD.md)
+explains how the two layers fit.
+
+## Limits, stated plainly
+
+- No runner yet. A contestant that stops (rate limit, context reset, crash)
+  stays stopped until you restart it. Check the seats every ten minutes or
+  so.
+- The numeric black box worker uses POSIX signals: macOS and Linux only.
+- One daemon serves one challenge on localhost; there is no multi-tenant or
+  remote mode.
+- The theorem-side end-to-end test needs a Lean toolchain and is run by
+  hand, not by CI.
+- In the evidence kit, gates run one after another, and "proved" rungs cite
+  human-checked proofs; it does not call the kernel.
+
+## What is in the box
+
+```text
+arena/               daemon, kernel and oracle runners, proof DAG, client, ops scripts, tests
+challenges/          problem packages: _template, smoke_min (theorem), ising_lift (numeric)
+gauntlet/            evidence kit: claim manifests, gates, ladder, provenance, tables
+example_ising/       worked evidence-kit instance
+instance_template/   evidence-kit package to copy
+run_demo.py          evidence-kit entry point
+CONTESTANT.md        the contestant protocol
+SETUP.md             install, add a challenge, run and watch a contest
+AGENTS.md            the same, in command form, for an AI agent (CLAUDE.md points here)
+METHOD.md            design: arena, funnel, evidence, ship
+CONTRIBUTING.md      how changes are verified; the rules the code keeps
+```
+
+## Contributing
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md): which checks run automatically on
+every push, which you must run by hand, and the invariants any change must
+preserve (the daemon stays the only writer; nothing certifies itself; logs
+are append-only; the repository stays free of machine- and account-specific
+paths).
+
+## Cite
+
+A paper describing the method and what it found is in preparation. Until it
+appears, cite this repository by URL and commit.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

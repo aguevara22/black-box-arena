@@ -192,6 +192,17 @@ python3 arena/client.py oracle --contestant-id claude --input '{"n":7}' \
 
 `challenges/ising_lift` is a complete worked example of the blocks.
 
+## After SOLVED: consolidate the result
+
+The arena ends at a peer-verified finish. The evidence kit (Layer B,
+`gauntlet/`) turns that result into checked, laddered claims: copy
+`instance_template/` to a new instance, fill the TODOs (the accepted
+algorithm, its claims, the gates that check them), and run
+`.venv/bin/python run_demo.py --instance <name>` until it is green. Promote
+claims up the ladder only with new evidence; paste the generated
+verification tables into the write-up, never hand-edited ones. Keep
+`state/`, `.venv/`, scratch and backups out of the tree; `.gitignore` ships.
+
 ## Evidence-kit demo
 
 Layer B needs no third-party package, only the Python 3.11+ interpreter:
