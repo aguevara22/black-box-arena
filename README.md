@@ -1,61 +1,62 @@
 # Black Box Arena
 
-Put two AI agents on a hard mathematical problem, and let a checker that
-nobody can argue with decide what is true.
-
 Version 0.3 (in development).
 
-## What it does
+## Introduction
 
-You have a hard problem. It is one of two kinds:
+You have a black box. For any input you can get the answer, but nobody
+knows the rule inside: no formula, no algorithm, no construction. You want
+that rule. Black Box Arena hands the problem to two AI agents and makes it
+impossible for them to bluff.
 
-- **A theorem you want proved.**
-- **A black box you want understood.** You can compute the answer for any
-  input, but you do not know the formula, the algorithm, or the
-  construction behind it, and you want one.
+![Two agents work on a black box through a gatekeeper that records everything](docs/arena.svg)
 
-You hand the problem to two AI agents. They work at the same time, each in
-its own session, and they can read each other's notes. Left alone, agents
-also fool themselves and each other: they announce results that are not
-true, and they agree with each other too easily. The arena makes that
-impossible with three rules.
+The two agents work at the same time, each in its own session, and they can
+read each other's notes. Between them and the box stands a gatekeeper, a
+small program that runs for the whole contest. Three rules do the work.
 
-1. **A neutral checker decides what is true.** For a theorem, the checker is
-   the Lean proof checker: a proof either compiles or it does not, and no
-   amount of argument changes that. For a black box, the checker is the
-   black box itself. The agents may ask it questions, but only through a
-   gatekeeper program that writes down every question and every answer.
-   The agents never see the code inside the box.
-2. **An agent may claim only what the checker has confirmed.** "I am sure"
-   counts for nothing. "The checker confirmed it, here is the receipt"
-   counts. Each receipt is a line in the gatekeeper's record, and the
-   record can only grow; nothing in it is ever edited or erased.
+1. **Only the gatekeeper touches the box.** An agent sends its question to
+   the gatekeeper, the gatekeeper asks the box and hands back the answer,
+   and it writes down every question and every answer, in order, in a
+   record that can only grow. Nothing in it is ever edited or erased. The
+   agents never see the code inside the box.
+2. **An agent may claim only what the record confirms.** "I am sure" counts
+   for nothing. Better still, an agent can register its guess *before*
+   asking; when the box confirms the guess, that is a receipt that the
+   hypothesis is real, and the gatekeeper marks it as such.
 3. **The problem is finished only when the two agents agree.** One agent
-   proposes a complete answer with its receipts. The other agent examines
-   it and either accepts or points at the gap. Only then is the problem
-   marked solved.
+   proposes a complete answer with its receipts, and the gatekeeper first
+   checks that there are enough of them, covering the cases the problem
+   demands. The other agent then examines the proposal and either accepts
+   it or names the gap. Only then does the gatekeeper mark the problem
+   solved.
 
-What you get at the end is the answer, and with it a complete written
-account of how it was found: every question asked, every answer given,
-every claim made, who checked what, in what order. Anyone can read that
-account later and follow the reasoning step by step.
+Why two agents: one agent has nobody to catch it. Two agents compete for
+the answer and verify each other, and if they come from different vendors
+they do not share blind spots.
 
-A few words the rest of the documentation uses: the gatekeeper program is
-called **the daemon**; each of the two agents is a **contestant**; your
-problem, packaged as a folder, is a **challenge**; the file the daemon
-writes when the two agents agree is called **SOLVED**.
+What you hold at the end is the rule behind the box, and with it the full
+written account of how it was found: every question, every answer, every
+claim, who checked what, in what order. Anyone can read that account later
+and follow the reasoning step by step.
+
+A few words the rest of the documentation uses: the gatekeeper is called
+**the daemon**; the black box is **the oracle**; each of the two agents is a
+**contestant**; your problem, packaged as a folder, is a **challenge**; the
+file the daemon writes when the two agents agree is called **SOLVED**.
 
 ## Who it is for
 
-- Mathematicians and scientists who want to try AI agents on a real open
-  problem and be able to trust, and show, how the result was reached.
-- Anyone with a statement to prove in Lean 4, or a computable function they
-  want turned into a formula or a construction.
+- Scientists and mathematicians who have a computable quantity and want
+  the closed form, the algorithm or the construction behind it, found by
+  agents, with a record they can trust and show.
+- Anyone who wants to try AI agents on a real open problem without taking
+  their word for the result.
 - People who study how autonomous agents behave when they cannot bluff.
 
 ## Try it in five minutes
 
-You need Python 3.11 or newer, and nothing else for this part.
+You need Python 3.11 or newer, and nothing else.
 
 ```sh
 git clone <this repository>
@@ -65,15 +66,15 @@ python3.11 -m venv .venv                         # any Python 3.11 or newer work
 .venv/bin/python arena/smoke_oracle.py
 ```
 
-The last command plays a whole contest on a small built-in black-box
-problem, with two scripted stand-ins for the agents. You will see them
-question the box, register a guess before asking and get it confirmed,
-post findings, try to finish too early and be refused for thin evidence,
-finish properly, check each other, and reach `SOLVED`. It ends with the
-line `ORACLE-SMOKE: ALL OK`.
+The last command plays a whole contest on a small built-in black box, with
+two scripted stand-ins for the agents. You will see them question the box,
+register a guess before asking and get it confirmed, post findings, try to
+finish too early and be refused for thin evidence, finish properly, check
+each other, and reach `SOLVED`. It ends with the line
+`ORACLE-SMOKE: ALL OK`.
 
-To ask the box a question yourself, keep a daemon running in one terminal
-and use the second:
+To question the box yourself, keep a daemon running in one terminal and use
+a second one:
 
 ```sh
 .venv/bin/python arena/daemon.py --challenge ising_lift          # terminal 1
@@ -83,28 +84,16 @@ python3 arena/client.py oracle --contestant-id claude \
   --predict '{"status":"ok","coefficient":0}' --hypothesis "fields alone give 0"
 ```
 
-The theorem side needs the Lean toolchain as well; [SETUP.md](SETUP.md)
-shows how to install it, and `.venv/bin/python arena/smoke_arena.py` plays
-a small proving contest the same way. The first run downloads a Lean
-toolchain and says so.
+## Give it your own black box
 
-## Give it your own problem
+Your problem becomes a folder under `challenges/`. It holds a Python
+function that computes the answer (the box), a description of what inputs
+it accepts and what its answers look like, a short written statement of the
+task for the agents, and a rule for how much evidence a proposed solution
+must show before anyone looks at it. Start from the folder
+`challenges/_template` and change it.
 
-Your problem becomes a folder under `challenges/`.
-
-For a **theorem**, the folder holds the definitions the statement needs,
-the statement itself, written in Lean 4, and a few small worked examples
-that must compile before the arena will start, so that the definitions
-provably mean what your description says. Start from the folder
-`challenges/smoke_min` and change it.
-
-For a **black box**, the folder holds a Python function that computes the
-answer, a description of what inputs it accepts and what its answers look
-like, a short written statement of the task for the agents, and a rule for
-how much evidence a proposed solution must show before anyone looks at it.
-Start from the folder `challenges/_template` and change it.
-
-[SETUP.md](SETUP.md) walks through both, with a check at the end that tells
+[SETUP.md](SETUP.md) walks through it, with a check at the end that tells
 you it worked. [AGENTS.md](AGENTS.md) has the same steps written for an AI
 agent, so you can hand the setup to one.
 
@@ -116,8 +105,8 @@ You are the person in charge. The work is this:
 2. Open two AI agent sessions, for example one Claude Code and one Codex,
    and paste into each a short text from [SETUP.md](SETUP.md) that tells it
    which of the two contestants it is and where the daemon is. From then on
-   each agent works in rounds: read the shared notes, think, ask the checker,
-   post what it found, repeat.
+   each agent works in rounds: read the shared notes, think, guess, ask the
+   box, post what it found, repeat.
 3. Look in from time to time. The agents cannot cheat, but they can stop:
    a rate limit, a lost context, a crash. Nothing restarts them yet; you
    paste the text again.
@@ -125,26 +114,38 @@ You are the person in charge. The work is this:
    `state/` folder next to it is the full account of the contest. Keep it.
 
 The agents may also consult an outside model for hard derivations. That
-advice never counts as evidence; only the checker's receipts do.
+advice never counts as evidence; only the record does.
 
 Optional, after a solution: the folder `gauntlet/` holds tools that turn
-the accepted solution into a set of independently checked claims with
-generated tables you can put in a paper. [METHOD.md](METHOD.md) explains
-the design behind all of this.
+the accepted rule into a set of independently checked claims with generated
+tables you can put in a paper. [METHOD.md](METHOD.md) explains the design
+behind all of this.
+
+## Experimental: proving theorems
+
+The same arena can run with a proof checker in place of the black box. The
+problem is then a statement written in Lean 4, the gatekeeper hands the
+agents' attempted proofs to the Lean checker, and a proof either compiles
+or it does not. The agents build the proof together, piece by piece, and
+the finish is a complete proof of the statement accepted by the other
+agent. This mode works and has its own test run, but it is young, needs a
+Lean installation, and is not what the arena is about. Details in
+[SETUP.md](SETUP.md) under the kernel regime; the example problem is
+`challenges/smoke_min`.
 
 ## Known limits
 
 - Nothing restarts an agent that stops; you do.
-- The black-box side runs on macOS and Linux only.
+- The box runs on macOS and Linux only.
 - One daemon serves one problem on one machine.
-- The theorem-side test run needs a Lean installation, so it is run by hand
-  rather than automatically.
+- The theorem mode is experimental and its test run is done by hand.
 
 ## What is where
 
 ```text
-arena/               the daemon, the checkers, the agents' command-line tool, tests
-challenges/          problems: _template (blank), smoke_min (a tiny theorem), ising_lift (a black box)
+arena/               the daemon, the box runner, the agents' command-line tool, tests
+challenges/          problems: _template (blank), ising_lift (a worked black box), smoke_min (experimental theorem)
+docs/                the figure above
 gauntlet/            tools that turn a solution into checked claims and tables
 example_ising/       a worked example of those tools
 instance_template/   a blank to copy for them
