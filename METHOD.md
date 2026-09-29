@@ -6,9 +6,9 @@ identification-and-construction problems, in two coupled layers:
 
 - **Layer A — the arena** (`arena/`, `challenges/`): autonomous multi-agent
   research under adversarial peer verification against a ground truth the
-  agents cannot argue with — the Lean 4 kernel for theorems
-  (`ground_truth: kernel`), a sealed numeric oracle for identification
-  problems (`ground_truth: oracle`). This is the discovery engine.
+  agents cannot argue with — a sealed numeric oracle, the black box
+  (`ground_truth: oracle`); experimentally, the Lean 4 kernel for theorems
+  (`ground_truth: kernel`). This is the discovery engine.
 - **Layer B — the evidence kit** (`gauntlet/`, `example_ising/`,
   `instance_template/`): the claim-coupled verification discipline an agent
   (or a human) uses to make results finish-grade, and to consolidate a

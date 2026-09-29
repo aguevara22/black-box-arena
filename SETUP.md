@@ -13,8 +13,17 @@ saying so.
   .venv/bin/pip install -r arena/requirements.txt
   ```
 
-- **Lean toolchain manager** (elan). Installs to `~/.elan`, never inside
-  this repo:
+- The advisor is optional; its SDK imports are lazy:
+
+  ```sh
+  .venv/bin/pip install openai google-genai
+  ```
+
+  Put optional `OPENAI_API_KEY` / `GEMINI_API_KEY` in `.env`. Advisor calls
+  use a fail-closed spend ledger and a hard cap.
+
+- **Lean toolchain manager** (elan) — only for the experimental theorem
+  mode. Installs to `~/.elan`, never inside this repo:
 
   ```sh
   curl -sSf https://elan.lean-lang.org/elan-init.sh | sh -s -- -y --no-modify-path --default-toolchain none
@@ -30,31 +39,22 @@ saying so.
   ~/.elan/bin/elan toolchain install "$(cat challenges/smoke_min/lean-toolchain)"
   ```
 
-- The advisor is optional; its SDK imports are lazy:
-
-  ```sh
-  .venv/bin/pip install openai google-genai
-  ```
-
-  Put optional `OPENAI_API_KEY` / `GEMINI_API_KEY` in `.env`. Advisor calls
-  use a fail-closed spend ledger and a hard cap.
-
 ## Where things live
 
 | What | Where | Why |
 |---|---|---|
 | Repo + challenge sources | wherever you cloned (iCloud is fine) | frozen files only |
 | Arena state (append-only JSONL) | `state/` or `$ORACLE_STATE_ROOT` | small text files |
-| Lean build workspaces | `~/.cache/arena-lean/<challenge>` or `$ARENA_LEAN_WORKSPACE_ROOT` | `.lake` build trees must stay OUT of iCloud — sync/eviction breaks builds |
+| Lean build workspaces (theorem mode) | `~/.cache/arena-lean/<challenge>` or `$ARENA_LEAN_WORKSPACE_ROOT` | `.lake` build trees must stay OUT of iCloud — sync/eviction breaks builds |
 
 For long live sessions prefer a local `ORACLE_STATE_ROOT` too: iCloud
 eviction can stall the `fsync` on every append.
 
-## Numeric challenges: the sealed oracle (`ground_truth: oracle`)
+## Quickstart: the black box (`ground_truth: oracle`)
 
-The worked example is `challenges/ising_lift` (a sealed classical coefficient
-over weighted graphs; contestants must construct the polynomial lift whose
-extraction reproduces it). Its `oracle.py` is imported only by the daemon's
+This is the arena's main mode. The worked example is `challenges/ising_lift`
+(a sealed classical coefficient over weighted graphs; contestants must
+construct the polynomial lift whose extraction reproduces it). Its `oracle.py` is imported only by the daemon's
 worker subprocess (`arena/oracle_worker.py`, POSIX only: it uses
 `signal.alarm` for the per-query timeout).
 
@@ -71,37 +71,6 @@ Every oracle call is logged to `state/<challenge>/shared/oracle_log.jsonl`
 with the request id and input hash the daemon correlated it by; a finish
 proposal must carry the `EVIDENCE:` rows `config.yaml`'s `finish_gate`
 demands (see CONTESTANT.md).
-
-To add an oracle challenge: copy `challenges/_template/`, set
-`ground_truth: oracle`, `kernel.enabled: false`, fill `oracle.py :: query`,
-the `oracle.input_schema`, and `finish_gate`; keep the answer key out of
-every open file. Skip the Lean files entirely.
-
-## Arena quickstart (kernel regime)
-
-Start the smoke challenge daemon (first boot fetches the pinned toolchain if
-it is missing, materializes the workspace and builds the frozen libraries —
-seconds for mathlib-free challenges, minutes for mathlib ones):
-
-```sh
-.venv/bin/python arena/daemon.py --challenge smoke_min
-```
-
-In another shell:
-
-```sh
-python3 arena/client.py health
-python3 arena/client.py problem
-printf 'import Defs.Basic\n#eval Arena.double 21\n' | \
-  python3 arena/client.py check --mode eval --file - --wait
-```
-
-The deterministic integration retest (temp state, temp workspace, real
-client CLI, no advisor/agent/external API):
-
-```sh
-.venv/bin/python arena/smoke_arena.py
-```
 
 ## Real contestant sessions
 
@@ -139,8 +108,8 @@ python3 arena/client.py snapshot --contestant-id "$CONTESTANT_ID"
 The manager is read-only:
 
 ```sh
-.venv/bin/python arena/status.py --challenge smoke_min --json
-.venv/bin/python arena/manager.py --challenge smoke_min
+.venv/bin/python arena/status.py --challenge ising_lift --json
+.venv/bin/python arena/manager.py --challenge ising_lift
 ```
 
 ## Operations
@@ -149,32 +118,18 @@ The manager is read-only:
 `launchctl` supervision. Pass the challenge name:
 
 ```sh
-arena/ops/start.sh smoke_min
-arena/ops/status.sh smoke_min
+arena/ops/start.sh ising_lift
+arena/ops/status.sh ising_lift
 arena/ops/stop.sh
 ```
 
-## Add a challenge
+## Add a challenge: your own black box
 
 ```sh
 cp -R challenges/_template challenges/my_case
 ```
 
-Then set `challenge.name`, write `problem.md`, and author the frozen Lean
-layer: `Defs/` (the definitions), `Goal.lean` (`def Arena.GoalStatement :
-Prop := ...`), and `Calibration/` (concrete `by decide` examples — they must
-compile at daemon startup or the daemon refuses to serve). Pin
-`lean-toolchain`; for mathlib challenges set `kernel.uses_mathlib: true`,
-commit a `lake-manifest.json` pin, and add `Mathlib` to
-`hygiene.import_allowlist`.
-
-Nothing is secret: contestants may read every frozen file. The discipline is
-that the daemon's kernel verdict — recorded in the append-only job log — is
-the only admissible evidence, and contestants never touch the workspace.
-
-### Add a numeric challenge (sealed oracle)
-
-No Lean layer. Copy the template, then in `config.yaml` set
+Then set `challenge.name: my_case` and, in `config.yaml`,
 `ground_truth: oracle`, `kernel.enabled: false`, and add the `oracle:` block
 (a one-sentence `description`, a JSON Schema for query payloads, one for
 answers, a per-query `timeout_seconds`) and the `finish_gate:` block (how
@@ -190,7 +145,9 @@ python3 arena/client.py oracle --contestant-id claude --input '{"n":7}' \
   --predict '{"value":49}' --hypothesis "f(n) = n^2"
 ```
 
-`challenges/ising_lift` is a complete worked example of the blocks.
+`challenges/ising_lift` is a complete worked example of the blocks. Keep the
+answer key out of every file a contestant may read: contestants may read the
+whole repository except `oracle.py`, and only the daemon's worker imports it.
 
 ## After SOLVED: consolidate the result
 
@@ -202,6 +159,59 @@ algorithm, its claims, the gates that check them), and run
 claims up the ladder only with new evidence; paste the generated
 verification tables into the write-up, never hand-edited ones. Keep
 `state/`, `.venv/`, scratch and backups out of the tree; `.gitignore` ships.
+
+## Experimental: theorem mode (`ground_truth: kernel`)
+
+The same arena can run with the Lean 4 kernel in place of the black box:
+the challenge is a statement written in Lean, contestants build the proof
+together as a kernel-checked DAG, and the finish is a complete proof of the
+frozen goal accepted by the peer. This mode works and has its own
+end-to-end test, but it is young and needs elan (see Prerequisites).
+
+### Quickstart
+
+Start the smoke challenge daemon (first boot fetches the pinned toolchain if
+it is missing, materializes the workspace and builds the frozen libraries —
+seconds for mathlib-free challenges, minutes for mathlib ones):
+
+```sh
+.venv/bin/python arena/daemon.py --challenge smoke_min
+```
+
+In another shell:
+
+```sh
+python3 arena/client.py health
+python3 arena/client.py problem
+printf 'import Defs.Basic\n#eval Arena.double 21\n' | \
+  python3 arena/client.py check --mode eval --file - --wait
+```
+
+The deterministic integration retest (temp state, temp workspace, real
+client CLI, no advisor/agent/external API):
+
+```sh
+.venv/bin/python arena/smoke_arena.py
+```
+
+### Add a theorem challenge
+
+```sh
+cp -R challenges/smoke_min challenges/my_theorem
+```
+
+Then set `challenge.name: my_theorem`, write `problem.md`, and author the
+frozen Lean layer: `Defs/` (the definitions), `Goal.lean` (`def
+Arena.GoalStatement : Prop := ...`), and `Calibration/` (concrete `by decide`
+examples — they must compile at daemon startup or the daemon refuses to
+serve). Pin `lean-toolchain`; for mathlib challenges set
+`kernel.uses_mathlib: true`, commit a `lake-manifest.json` pin, and add
+`Mathlib` to `hygiene.import_allowlist`.
+
+Nothing is secret in a theorem challenge: contestants may read every frozen
+file. The discipline is that the daemon's kernel verdict — recorded in the
+append-only job log — is the only admissible evidence, and contestants never
+touch the workspace.
 
 ## Evidence-kit demo
 

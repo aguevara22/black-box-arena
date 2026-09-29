@@ -17,21 +17,22 @@ there, in prose. Commands run from the repository root.
 
 ## What this is
 
-A research arena: one daemon serves a ground truth and is the sole writer of
-shared state; two contestants (AI agents in their own sessions) work the
-problem through the daemon and verify each other; the daemon's append-only
-log is the only admissible evidence. The ground truth is chosen per
-challenge in `challenges/<name>/config.yaml`:
+A research arena: one daemon is the only gateway to a black box and the sole
+writer of shared state; two contestants (AI agents in their own sessions)
+work the problem through the daemon and verify each other; the daemon's
+append-only log is the only admissible evidence. The ground truth is chosen
+per challenge in `challenges/<name>/config.yaml`:
 
-- `ground_truth: kernel` — a theorem. The Lean 4 kernel checks proofs
-  against a frozen goal.
-- `ground_truth: oracle` — a numeric black box. The challenge's `oracle.py`
-  answers queries; contestants must identify or construct what it computes.
+- `ground_truth: oracle` — the black box (the main mode). The challenge's
+  `oracle.py` answers queries; contestants must identify or construct what it
+  computes.
+- `ground_truth: kernel` — experimental theorem mode. The Lean 4 kernel
+  checks proofs against a frozen goal.
 
 ## Set up (every machine, once)
 
 Requirements: Python 3.11 or newer; elan (the Lean toolchain manager) only
-for kernel challenges. Every entry point refuses an older Python with one
+for the experimental theorem mode. Every entry point refuses an older Python with one
 line saying so.
 
 ```sh
@@ -41,14 +42,14 @@ python3.11 -m venv .venv                         # any Python >= 3.11
 .venv/bin/python arena/smoke_oracle.py           # expect: ORACLE-SMOKE: ALL OK
 ```
 
-For kernel challenges also:
+For the experimental theorem mode also:
 
 ```sh
 curl -sSf https://elan.lean-lang.org/elan-init.sh | sh -s -- -y --no-modify-path --default-toolchain none
 .venv/bin/python arena/smoke_arena.py            # expect: ARENA-SMOKE: ALL OK
 ```
 
-The first kernel run fetches the pinned toolchain; the smoke and the daemon
+The first theorem-mode run fetches the pinned toolchain; the smoke and the daemon
 announce that and wait for it (minutes). Never copy a venv from another
 machine. Never commit `.venv/`, `state/`, `.lake/` or `.env`.
 
@@ -57,37 +58,7 @@ machine. Never commit `.venv/`, `state/`, `.lake/` or `.env`.
 Acceptance for either kind: the daemon reports `"ok": true` on `health`,
 `client.py problem` shows the statement, and one check or query returns.
 
-### A theorem (kernel)
-
-```sh
-cp -R challenges/smoke_min challenges/<name>
-```
-
-Then edit, all inside `challenges/<name>/`:
-
-1. `config.yaml`: `challenge.name: <name>` (must equal the directory name)
-   and `display_name`.
-2. `Defs/` and `Defs.lean`: the definitions. Contestants import them and
-   may never redefine them.
-3. `Goal.lean`: the target as `def Arena.GoalStatement : Prop := ...`.
-4. `Calibration/`: concrete examples closed `by decide` that pin the
-   definitions to what `problem.md` says they mean. They must compile at
-   daemon start, or the daemon refuses to serve.
-5. `problem.md`: the informal statement, the calibration table, the finish
-   criteria (keep the template's sections).
-6. `lean-toolchain`: keep the pin unless the problem needs another. For
-   Mathlib set `kernel.uses_mathlib: true`, commit a `lake-manifest.json`
-   pin, and add `Mathlib` to `hygiene.import_allowlist`.
-
-Check:
-
-```sh
-.venv/bin/python arena/daemon.py --challenge <name>     # shell 1
-python3 arena/client.py health                           # shell 2
-printf 'import Defs.Basic\n#eval 1 + 1\n' | python3 arena/client.py check --mode eval --file - --wait --contestant-id claude
-```
-
-### A numeric black box (oracle)
+### A black box (`ground_truth: oracle`, the main mode)
 
 ```sh
 cp -R challenges/_template challenges/<name>
@@ -116,6 +87,36 @@ Check:
 .venv/bin/python arena/daemon.py --challenge <name>     # shell 1
 python3 arena/client.py health                           # shell 2
 python3 arena/client.py oracle --contestant-id claude --input '<json>' --predict '<json>' --hypothesis "what a hit confirms"
+```
+
+### A theorem (`ground_truth: kernel`, experimental)
+
+```sh
+cp -R challenges/smoke_min challenges/<name>
+```
+
+Then edit, all inside `challenges/<name>/`:
+
+1. `config.yaml`: `challenge.name: <name>` (must equal the directory name)
+   and `display_name`.
+2. `Defs/` and `Defs.lean`: the definitions. Contestants import them and
+   may never redefine them.
+3. `Goal.lean`: the target as `def Arena.GoalStatement : Prop := ...`.
+4. `Calibration/`: concrete examples closed `by decide` that pin the
+   definitions to what `problem.md` says they mean. They must compile at
+   daemon start, or the daemon refuses to serve.
+5. `problem.md`: the informal statement, the calibration table, the finish
+   criteria (keep the template's sections).
+6. `lean-toolchain`: keep the pin unless the problem needs another. For
+   Mathlib set `kernel.uses_mathlib: true`, commit a `lake-manifest.json`
+   pin, and add `Mathlib` to `hygiene.import_allowlist`.
+
+Check:
+
+```sh
+.venv/bin/python arena/daemon.py --challenge <name>     # shell 1
+python3 arena/client.py health                           # shell 2
+printf 'import Defs.Basic\n#eval 1 + 1\n' | python3 arena/client.py check --mode eval --file - --wait --contestant-id claude
 ```
 
 ## Run a contest
@@ -164,11 +165,11 @@ python3 arena/client.py oracle --contestant-id claude --input '<json>' --predict
 
 | Path | What |
 |---|---|
-| `arena/daemon.py` | the daemon: sole writer of state, gateway to kernel or oracle |
+| `arena/daemon.py` | the daemon: sole writer of state, only gateway to the black box (or, experimentally, the Lean kernel) |
 | `arena/client.py` | the contestants' only tool (standard library) |
-| `arena/smoke_oracle.py`, `arena/smoke_arena.py` | end-to-end retests, oracle and kernel regime |
+| `arena/smoke_oracle.py`, `arena/smoke_arena.py` | end-to-end retests: black box; experimental theorem mode |
 | `arena/tests/` | unit suite, including the portability guard |
-| `challenges/<name>/` | one exchangeable problem package; `_template`, `smoke_min`, `ising_lift` are the models |
+| `challenges/<name>/` | one exchangeable problem package; `_template` (blank), `ising_lift` (worked black box), `smoke_min` (theorem mode) |
 | `state/<name>/` | append-only logs, proposals, `SOLVED` |
-| `CONTESTANT.md` | the contestant protocol (tick, DAG, finish, oracle regime) |
+| `CONTESTANT.md` | the contestant protocol (tick, finish, peer verification; theorem mode at the end) |
 | `README.md`, `SETUP.md`, `METHOD.md`, `CONTRIBUTING.md` | human documentation: front page, recipes, design, rules for changes |
