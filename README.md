@@ -4,9 +4,19 @@ Version 0.3 (in development).
 
 ## Introduction
 
-You have a black box. For any input you can get the answer, but nobody
-knows the rule inside: no formula, no algorithm, no construction. You want
-that rule. Black Box Arena hands the problem to two AI agents and makes it
+Much of physics and mathematics runs on formulas that were computed long
+before they were understood. A quantity can often be evaluated while the
+rule behind it stays unknown: a partition function summed by brute force for
+small systems, a scattering amplitude known only as numbers, an integral a
+computer evaluates to a hundred digits that nobody can write in closed form,
+a sequence of integers a program produces term by term, an invariant
+tabulated one knot at a time. The computation is a black box: an input goes
+in, an answer comes out, and the formula that would explain every answer at
+once is missing. Finding that formula is the part of the work where the
+understanding lives. It is also exactly the part an AI agent will claim to
+have done long before it has.
+
+Black Box Arena hands such a problem to two AI agents and makes it
 impossible for them to bluff.
 
 ![Two agents work on a black box through a gatekeeper that records everything](docs/arena.svg)
