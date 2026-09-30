@@ -4,13 +4,13 @@ Version 0.3 (in development).
 
 ## Introduction
 
-Much of physics and mathematics runs on formulas that were computed long
-before they were understood. A quantity can often be evaluated while the
+Sometimes in physics and mathematics a quantity can be evaluated while the
 rule behind it stays unknown: a partition function summed by brute force for
 small systems, a scattering amplitude known only as numbers, an integral a
-computer evaluates to a hundred digits that nobody can write in closed form,
-a sequence of integers a program produces term by term, an invariant
-tabulated one knot at a time. The computation is a black box: an input goes
+computer evaluates to a hundred digits to which closed form is unknown,
+a sequence of integers a program produces term by term, etc.
+
+These computations are examples of black boxes: an input goes
 in, an answer comes out, and the formula that would explain every answer at
 once is missing. Finding that formula is the part of the work where the
 understanding lives. It is also exactly the part an AI agent will claim to
