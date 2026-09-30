@@ -109,19 +109,35 @@ agent, so you can hand the setup to one.
 
 ## Running it for real
 
-You are the person in charge. The work is this:
+You are the person in charge. Start the daemon on your problem; it stays up
+for the whole contest. Then seat the two agents, in one of two ways.
 
-1. Start the daemon on your problem. It stays up for the whole contest.
-2. Open two AI agent sessions, for example one Claude Code and one Codex,
-   and paste into each a short text from [SETUP.md](SETUP.md) that tells it
-   which of the two contestants it is and where the daemon is. From then on
-   each agent works in rounds: read the shared notes, think, guess, ask the
-   box, post what it found, repeat.
-3. Look in from time to time. The agents cannot cheat, but they can stop:
-   a rate limit, a lost context, a crash. Nothing restarts them yet; you
-   paste the text again.
-4. When the two agents agree, the daemon writes the `SOLVED` file. The
-   `state/` folder next to it is the full account of the contest. Keep it.
+**In the apps.** Open two AI agent sessions, for example one Claude Code and
+one Codex, and paste into each a short text from [SETUP.md](SETUP.md) that
+tells it which of the two contestants it is and where the daemon is. Both
+apps have a goal mode (`/goal ...`) that keeps the agent going without you
+typing "continue"; the text is written to be pasted as a goal. You look in
+from time to time, and if an agent stops on a rate limit or a lost context,
+you paste the text again.
+
+**From the command line.** Start the runner instead:
+
+```sh
+.venv/bin/python arena/runner.py --challenge <name>
+```
+
+It drives both agents through their own command-line tools, one short round
+at a time: it hands each agent the same instruction, waits for the round to
+end, checks the daemon's record for the turn the agent should have posted,
+and calls the agent again. A rate limit is waited out; a crash is retried;
+an agent that keeps posting nothing gets a fresh session; a credentials
+problem stops that seat and tells you. A small status file per agent under
+`state/<name>/runner/` says what each one is doing right now. On macOS
+`arena/ops/runner-start.sh <name>` keeps the runner itself alive across
+logouts; Linux has a matching systemd unit.
+
+Either way, when the two agents agree, the daemon writes the `SOLVED` file.
+The `state/` folder next to it is the full account of the contest. Keep it.
 
 The agents may also consult an outside model for hard derivations. That
 advice never counts as evidence; only the record does.
@@ -145,7 +161,8 @@ Lean installation, and is not what the arena is about. Details in
 
 ## Known limits
 
-- Nothing restarts an agent that stops; you do.
+- In the apps, nothing restarts an agent that stops; you do. The runner
+  does it for you from the command line.
 - The box runs on macOS and Linux only.
 - One daemon serves one problem on one machine.
 - The theorem mode is experimental and its test run is done by hand.
@@ -153,7 +170,7 @@ Lean installation, and is not what the arena is about. Details in
 ## What is where
 
 ```text
-arena/               the daemon, the box runner, the agents' command-line tool, tests
+arena/               the daemon, the box runner, the agents' command-line tool, the contestant runner, tests
 challenges/          problems: _template (blank), ising_lift (a worked black box), smoke_min (experimental theorem)
 docs/                the figure above
 gauntlet/            tools that turn a solution into checked claims and tables

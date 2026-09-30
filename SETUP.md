@@ -74,23 +74,69 @@ demands (see CONTESTANT.md).
 
 ## Real contestant sessions
 
-The daemon is passive; the operator starts each agent session by hand. Both
-follow `CONTESTANT.md`. There is no runner yet: a seat that stops (rate
-limit, context reset, crash) stays stopped until you restart it, so check
-each contestant's last turn in `client.py snapshot` now and then.
+The daemon is passive. Both contestants follow `CONTESTANT.md`; you seat
+them in one of two ways. Pick one per contest; they can also be mixed (one
+seat in an app, one under the runner).
 
-To seat an agent, open a coding-agent session (Claude Code, Codex, any
-agent that can run shell commands) in the repo root and paste, with the id
-and URL of that seat:
+### A. In the apps
+
+Open a coding-agent session (Claude Code, Codex, any agent that can run
+shell commands) in the repo root and paste, with the id and URL of that
+seat, as a goal (`/goal` in both Claude Code and Codex keeps the agent
+working without you typing "continue"; plain paste works too):
 
 ```text
-Read CONTESTANT.md and follow it exactly. You are contestant `claude`
+/goal Read CONTESTANT.md and follow it exactly. You are contestant `claude`
 (export CONTESTANT_ID=claude) against the daemon at
-ORACLE_DAEMON_URL=http://127.0.0.1:8787. Do one tick, post your turn, then
-start the next tick; keep going until SOLVED appears in the snapshot or I
-stop you. Use only arena/client.py; never edit state files or the Lean
-workspace; do not read challenges/<name>/oracle.py.
+ORACLE_DAEMON_URL=http://127.0.0.1:8787. Do one tick, post your turn with
+`python3 arena/client.py turn`, then start the next tick; keep going until
+the snapshot shows SOLVED or I stop you. Use only arena/client.py; never edit
+state files or the Lean workspace; do not read challenges/<name>/oracle.py.
 ```
+
+Nothing restarts a seat in this mode: an agent that stops on a rate limit, a
+context reset or a crash stays stopped until you paste again, so check each
+contestant's last turn in `client.py snapshot` now and then.
+
+### B. From the command line: the runner
+
+```sh
+.venv/bin/python arena/runner.py --challenge <name>            # seats claude=claude codex=codex
+.venv/bin/python arena/runner.py --challenge <name> --dry-run  # show the commands it would run
+```
+
+The runner drives each seat through that agent's own command-line tool, one
+bounded round per invocation: `claude -p` with a pinned session id that is
+resumed every round, and `codex exec` followed by `codex exec resume
+<thread>`. Each round carries the same short kickoff ("do exactly one tick,
+record it with `client.py turn`, stop"); the agent's memory between rounds is
+the daemon's shared state. A round counts only if a new entry appeared in
+that seat's `turns.jsonl`. Then:
+
+| Outcome | What the runner does |
+|---|---|
+| a turn was recorded | pause (`--pause`, default 10 s), next round |
+| the agent ran but recorded nothing | strike; after `--max-idle-rounds` (3) a fresh session |
+| rate or usage limit in the output | wait 5, 10, 20, 40, 60 minutes, retry |
+| crash or `--round-timeout` (30 min) | wait 1, 2, 4, 8, 15 minutes; fresh session after 5 |
+| credentials problem | that seat stops and says so; fix, restart the runner |
+
+Gauges: `state/<name>/runner/<seat>.json` (status, round, last recorded
+turn, next attempt) and `<seat>.log` (every round's output). The runner
+writes nothing else; the daemon's files stay the daemon's. It exits 0 when
+`SOLVED` appears.
+
+Options: `--seat <id>=<claude|codex|command:TEMPLATE>` (repeatable; a
+`command:` template with `{prompt}`, `{prompt_file}`, `{seat}`, `{url}`
+plugs in any other agent CLI), `--claude-permission-mode` (default `auto`),
+`--claude-args`, `--codex-sandbox` (default `workspace-write`),
+`--codex-args` (for example `-m <model>`), `--rounds N`, `--once`. Run the
+runner with the same `ORACLE_STATE_ROOT` as the daemon.
+
+To keep the runner itself alive across logouts: `arena/ops/runner-start.sh
+<name> [runner args]` and `arena/ops/runner-stop.sh` (macOS launchd), or
+`arena/ops/arena-runner.service` (Linux systemd user unit). Both need
+`claude` and `codex` on the PATH they set (`~/.local/bin`, Homebrew).
 
 | Contestant id | Agent runner | Cross-vendor advisor | Optional key |
 |---|---|---|---|

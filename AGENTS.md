@@ -124,24 +124,43 @@ printf 'import Defs.Basic\n#eval 1 + 1\n' | python3 arena/client.py check --mode
 1. Start the daemon on the challenge (shell 1, or `arena/ops/start.sh
    <name>` for supervised operation on macOS). Optional advisor keys go in
    `.env` (`OPENAI_API_KEY`, `GEMINI_API_KEY`); the daemon runs without them.
-2. Seat two contestants: open two agent sessions in the repository root and
+2. Seat two contestants, one of two ways.
+
+   **Command line (preferred when unattended):**
+
+   ```sh
+   .venv/bin/python arena/runner.py --challenge <name> --dry-run   # inspect the commands
+   .venv/bin/python arena/runner.py --challenge <name>             # seats claude=claude codex=codex
+   ```
+
+   The runner calls `claude -p` and `codex exec` one bounded round at a
+   time, resumes each seat's session, counts a round only if a new turn
+   appeared in `state/<name>/contestants/<seat>/turns.jsonl`, waits out
+   rate limits, retries crashes, gives a silent seat a fresh session, and
+   stops a seat with a credentials problem. Gauges:
+   `state/<name>/runner/<seat>.json`. Keep it alive with
+   `arena/ops/runner-start.sh <name>` (macOS) or `arena/ops/arena-runner.service`
+   (Linux). Any other agent CLI plugs in with
+   `--seat <id>=command:'<shell template with {prompt}>'`.
+
+   **In the apps:** open two agent sessions in the repository root and
    paste this into each, with its own id (`claude`, `codex`) and the
-   daemon's URL:
+   daemon's URL, as a `/goal` so the agent keeps going:
 
    ```text
-   Read CONTESTANT.md and follow it exactly. You are contestant `claude`
+   /goal Read CONTESTANT.md and follow it exactly. You are contestant `claude`
    (export CONTESTANT_ID=claude) against the daemon at
-   ORACLE_DAEMON_URL=http://127.0.0.1:8787. Do one tick, post your turn, then
-   start the next tick; keep going until SOLVED appears in the snapshot or I
-   stop you. Use only arena/client.py; never edit state files or the Lean
-   workspace; do not read challenges/<name>/oracle.py.
+   ORACLE_DAEMON_URL=http://127.0.0.1:8787. Do one tick, post your turn with
+   `python3 arena/client.py turn`, then start the next tick; keep going until
+   the snapshot shows SOLVED or I stop you. Use only arena/client.py; never
+   edit state files or the Lean workspace; do not read challenges/<name>/oracle.py.
    ```
 
 3. Watch. `python3 arena/client.py snapshot --contestant-id claude` shows
    shared state and turns; the daemon writes `state/<name>/SOLVED` when a
-   finish is peer-verified. There is no runner yet: a contestant that stops
-   (rate limit, context reset, crash) stays stopped until you restart it
-   with the same text. Check both seats every ten minutes or so.
+   finish is peer-verified. In the apps, a contestant that stops (rate
+   limit, context reset, crash) stays stopped until you paste again; check
+   both seats every ten minutes or so. Under the runner, read the gauges.
 4. Stop with `arena/ops/stop.sh` or by ending the daemon process. State is
    append-only under `state/<name>/` (or `$ORACLE_STATE_ROOT`); keep it, it
    is the record.
@@ -167,6 +186,7 @@ printf 'import Defs.Basic\n#eval 1 + 1\n' | python3 arena/client.py check --mode
 |---|---|
 | `arena/daemon.py` | the daemon: sole writer of state, only gateway to the black box (or, experimentally, the Lean kernel) |
 | `arena/client.py` | the contestants' only tool (standard library) |
+| `arena/runner.py` | drives the seats from the command line: bounded rounds, resume, backoff, gauges |
 | `arena/smoke_oracle.py`, `arena/smoke_arena.py` | end-to-end retests: black box; experimental theorem mode |
 | `arena/tests/` | unit suite, including the portability guard |
 | `challenges/<name>/` | one exchangeable problem package; `_template` (blank), `ising_lift` (worked black box), `smoke_min` (theorem mode) |

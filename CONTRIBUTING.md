@@ -26,6 +26,10 @@ request, on Python 3.11 and 3.12:
    tracked build, venv or state tree;
 2. the numeric-regime end-to-end smoke `arena/smoke_oracle.py`.
 
+The unit suite includes tests that boot the daemon on the built-in black box
+and drive one runner round with a scripted stand-in for the agent; they need
+no agent CLI and no network.
+
 ## What you must run by hand
 
 1. The theorem-regime end-to-end smoke, because it needs elan and a Lean

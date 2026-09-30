@@ -1,0 +1,24 @@
+# systemd user unit for the contestant runner (Linux). Copy to
+# ~/.config/systemd/user/arena-runner.service, replace /path/to/arena and the
+# challenge name, then:
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now arena-runner
+#   journalctl --user -u arena-runner -f
+# The daemon must already be running; gauges appear under
+# state/<challenge>/runner/.
+[Unit]
+Description=Black Box Arena contestant runner
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/path/to/arena
+Environment=PATH=/path/to/arena/.venv/bin:%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=ORACLE_STATE_ROOT=/path/to/arena/state
+Environment=ORACLE_DAEMON_URL=http://127.0.0.1:8787
+ExecStart=/path/to/arena/.venv/bin/python /path/to/arena/arena/runner.py --challenge ising_lift --seat claude=claude --seat codex=codex
+Restart=on-failure
+RestartSec=60
+
+[Install]
+WantedBy=default.target
