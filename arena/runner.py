@@ -351,6 +351,7 @@ def run_round(seat: Seat, args: argparse.Namespace, stop: threading.Event) -> st
             cwd=ROOT,
             env=env,
             text=True,
+            stdin=subprocess.DEVNULL,  # codex exec waits for stdin EOF otherwise ("Reading additional input from stdin...")
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             start_new_session=True,

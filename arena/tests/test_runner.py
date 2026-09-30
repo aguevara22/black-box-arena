@@ -138,6 +138,18 @@ def test_one_round_where_the_agent_does_nothing_is_idle(live_daemon, tmp_path):
     assert gauge["last_outcome"] == "idle" and gauge["consecutive_idle"] == 1
 
 
+def test_agents_get_a_closed_stdin_so_they_cannot_wait_on_it(live_daemon, tmp_path):
+    # Found live: `codex exec` printed "Reading additional input from stdin..." and
+    # hung until the round timeout because the runner's stdin was inherited.
+    url, env = live_daemon
+    started = time.monotonic()
+    proc = _run_runner(env, url, "cat")
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert time.monotonic() - started < 30
+    gauge = json.loads((tmp_path / "state" / "ising_lift" / "runner" / "claude.json").read_text())
+    assert gauge["last_outcome"] == "idle"
+
+
 def test_dry_run_prints_the_first_commands(tmp_path):
     env = os.environ.copy()
     env["ORACLE_STATE_ROOT"] = str(tmp_path)
