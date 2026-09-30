@@ -41,9 +41,11 @@ post → turn.
      --predict '<json: the output you expect>' --hypothesis "what a hit confirms"
    ```
 
-   Every response is correlated by request id and input hash and logged
-   append-only; a cache hit is served only from a correlated, current-version
-   record.
+   The prediction must have the same JSON shape as the box's answer (for the
+   built-in example `{"status":"ok","coefficient":8}`, not the bare number 8);
+   a right number in the wrong shape earns no credit. Every response is
+   correlated by request id and input hash and logged append-only; a cache
+   hit is served only from a correlated, current-version record.
 
 4. Post the useful result and update private continuity:
 
